@@ -1,13 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getFeaturedLocations } from '@/lib/database/locations'
-import { getTodayForecastsForLocations } from '@/lib/database/forecasts'
+import { getTodayForecastsForLocations, getForecastsForLocation } from '@/lib/database/forecasts'
 import { LocationCard } from '@/components/location/LocationCard'
-import { LocationSearch } from '@/components/location/LocationSearch'
 import { Nav } from '@/components/layout/Nav'
-import { SunScene } from '@/components/hero/SunScene'
 import { APP_NAME, APP_TAGLINE, APP_DESCRIPTION } from '@/config/brand'
 import { EmailSubscribeForm } from '@/components/email/EmailSubscribeForm'
+import { UKHeatmap } from '@/components/ui/UKHeatmap'
+import { HeroSection } from '@/components/hero/HeroSection'
 
 export const revalidate = 7200
 
@@ -16,16 +16,8 @@ export const metadata: Metadata = {
   description: APP_DESCRIPTION,
 }
 
-const SCORE_COLORS: Record<string, string> = {
-  excellent: '#F5A828',
-  great:     '#E07540',
-  good:      '#5FAA88',
-  fair:      '#7A8DB8',
-  poor:      '#4A5872',
-}
-
 export default async function HomePage() {
-  const locations = await getFeaturedLocations()
+  const locations   = await getFeaturedLocations()
   const forecastMap = await getTodayForecastsForLocations(locations.map(l => l.id))
 
   const sorted = [...locations].sort((a, b) => {
@@ -34,241 +26,77 @@ export default async function HomePage() {
     return sb - sa
   })
 
-  // Top scored location for the hero pill
-  const topLocation = sorted.find(l => (forecastMap.get(l.id)?.score ?? -1) >= 0) ?? null
-  const topForecast = topLocation ? forecastMap.get(topLocation.id) ?? null : null
-
-  const scored = sorted.filter(l => (forecastMap.get(l.id)?.score ?? null) !== null)
+  const scored   = sorted.filter(l => (forecastMap.get(l.id)?.score ?? null) !== null)
   const unscored = sorted.filter(l => (forecastMap.get(l.id)?.score ?? null) === null)
+  const topId    = scored[0]?.id ?? null
+
+  // Pre-fetch 7-day forecasts for all scored locations in parallel
+  const weekEntries = await Promise.all(
+    scored.map(async loc => {
+      const fc = await getForecastsForLocation(loc.id, 7)
+      return [loc.id, fc] as [string, typeof fc]
+    })
+  )
+  const weekForecastsRecord = Object.fromEntries(weekEntries)
+
+  // Serialise the Map → plain Record for the client component
+  const forecastRecord = Object.fromEntries(
+    [...forecastMap.entries()].filter(([, v]) => v !== undefined)
+  ) as Record<string, NonNullable<ReturnType<typeof forecastMap.get>>>
 
   return (
     <>
       <Nav />
 
-      {/* ── Hero ── */}
+      {/* ── HERO ── */}
+      <HeroSection
+        locations={locations}
+        forecastRecord={forecastRecord}
+        weekForecastsRecord={weekForecastsRecord}
+        topId={topId}
+      />
+
+
+
+      {/* ── LOCATIONS STRIP ── */}
       <section
-        aria-label="Hero"
-        className="grain"
-        style={{
-          position: 'relative',
-          minHeight: '100svh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
-          background: '#07091a',
-        }}
+        id="locations"
+        aria-label="Tonight across the UK"
+        style={{ background: '#0C0908', padding: 'clamp(40px, 5vw, 60px) 0 clamp(48px, 6vw, 72px)' }}
       >
-        {/* Dynamic sky — real-time solar position, gradient, stars */}
-        <SunScene />
-
-        {/* Top fade for nav legibility */}
-        <div aria-hidden="true" style={{
-          position: 'absolute',
-          top: 0, left: 0, right: 0,
-          height: '160px',
-          background: 'linear-gradient(to bottom, rgba(7,9,26,0.75) 0%, transparent 100%)',
-          pointerEvents: 'none',
-        }} />
-
-        {/* Bottom fade — blends hero into the ground colour so the scroll is seamless.
-            z=60 sits above the sun (z=55) so the disc fades behind the horizon. */}
-        <div aria-hidden="true" style={{
-          position: 'absolute',
-          bottom: 0, left: 0, right: 0,
-          height: '50%',
-          background: 'linear-gradient(to bottom, transparent 0%, rgba(8,12,24,0.6) 35%, rgba(8,12,24,0.88) 65%, #080c18 100%)',
-          pointerEvents: 'none',
-          zIndex: 60,
-        }} />
-
-        {/* Hero content */}
-        <div style={{
-          position: 'relative',
-          zIndex: 65,
-          textAlign: 'center',
-          padding: '0 var(--px)',
-          maxWidth: '660px',
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '28px',
-        }}>
-
-          {/* Tonight's top pick — only shown when data exists */}
-          {topForecast && topLocation && (
-            <Link
-              href={`/sunset/${topLocation.slug}`}
-              className="top-pick-pill"
-              aria-label={`Tonight's best: ${topLocation.name}, score ${topForecast.score}`}
-            >
-              <span style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                background: 'rgba(255,255,255,0.06)',
-                fontFamily: 'var(--font-display)',
-                fontSize: '1rem',
-                fontWeight: 900,
-                color: SCORE_COLORS[topForecast.quality ?? 'great'] ?? '#E07540',
-                letterSpacing: '-0.03em',
-                flexShrink: 0,
-              }}>
-                {topForecast.score}
-              </span>
-              <span style={{ fontSize: '0.83rem', color: 'rgba(248,236,204,0.75)', fontWeight: 400 }}>
-                Tonight in <strong style={{ color: '#F5EDD8', fontWeight: 600 }}>{topLocation.name}</strong>
-                {topForecast.quality && (
-                  <> · <span style={{ color: SCORE_COLORS[topForecast.quality] }}>{topForecast.quality}</span></>
-                )}
-              </span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ opacity: 0.4, flexShrink: 0 }}>
-                <path d="M9 18l6-6-6-6" stroke="#F5EDD8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </Link>
-          )}
-
-          {/* Headline */}
-          <h1 className="font-display" style={{
-            fontSize: 'clamp(2.4rem, 6vw, 4rem)',
-            fontWeight: 900,
-            fontStyle: 'italic',
-            color: '#F5EDD8',
-            lineHeight: 1.05,
-            letterSpacing: '-0.02em',
-            margin: 0,
-          }}>
-            Will tonight&apos;s sunset be worth chasing?
-          </h1>
-
-          {/* Subline */}
-          <p style={{
-            fontSize: 'clamp(0.88rem, 1.8vw, 1rem)',
-            color: 'rgba(245,224,190,0.6)',
-            lineHeight: 1.65,
-            maxWidth: '400px',
-            margin: 0,
-          }}>
-            A 0–100 score for every UK sunset — based on cloud layers, atmosphere, and visibility.
-          </p>
-
-          {/* Search */}
-          <div style={{ width: '100%', maxWidth: '460px' }}>
-            <LocationSearch locations={locations} />
-          </div>
-        </div>
-
-        {/* Scroll cue */}
-        <div aria-hidden="true" style={{
-          position: 'absolute',
-          bottom: '28px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '5px',
-          opacity: 0.3,
-          zIndex: 65,
-        }}>
-          <span style={{ fontSize: '0.6rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#F5EDD8' }}>
-            All locations
-          </span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <path d="M12 5v14M5 12l7 7 7-7" stroke="#F5EDD8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </div>
-      </section>
-
-      {/* ── Location grid ── */}
-      <section
-        aria-label="Locations"
-        style={{
-          background: '#080c18',
-          padding: 'clamp(40px, 5vw, 64px) var(--px) clamp(64px, 8vw, 96px)',
-        }}
-      >
-        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-
-          <div style={{
-            display: 'flex',
-            alignItems: 'baseline',
-            justifyContent: 'space-between',
-            marginBottom: '28px',
-            flexWrap: 'wrap',
-            gap: '8px',
-          }}>
-            <h2 className="font-display" style={{
-              fontSize: 'clamp(1.4rem, 3vw, 1.8rem)',
-              fontWeight: 700,
-              fontStyle: 'italic',
-              color: '#E8E2D4',
-              letterSpacing: '-0.01em',
-              margin: 0,
-            }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 var(--px)' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '8px' }}>
+            <h2 className="font-display" style={{ fontSize: 'clamp(1.3rem, 2.5vw, 1.7rem)', fontWeight: 700, fontStyle: 'italic', color: '#EDE0C0', letterSpacing: '-0.01em', margin: 0 }}>
               Tonight across the UK
             </h2>
-            <span style={{ fontSize: '0.72rem', color: '#1E2D48' }}>
-              Updated every 2 hours
-            </span>
+            <span style={{ fontSize: '0.72rem', color: '#2E1C10', fontFamily: 'var(--font-mono)' }}>Updated every 2 hours</span>
           </div>
 
-          {/* Scored locations */}
           {scored.length > 0 && (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(min(260px, 100%), 1fr))',
-              gap: '14px',
-              marginBottom: unscored.length > 0 ? '40px' : '0',
-            }}>
+            <div className="scrollbar-hide" style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '4px' }}>
               {scored.map(loc => (
-                <LocationCard
-                  key={loc.id}
-                  location={loc}
-                  forecast={forecastMap.get(loc.id) ?? null}
-                />
+                <div key={loc.id} style={{ flexShrink: 0, width: '210px' }}>
+                  <LocationCard location={loc} forecast={forecastMap.get(loc.id) ?? null} />
+                </div>
               ))}
             </div>
           )}
 
-          {/* Unscored locations — minimal list */}
           {unscored.length > 0 && (
-            <div>
+            <div style={{ marginTop: '28px' }}>
               {scored.length > 0 && (
-                <p style={{ fontSize: '0.7rem', color: '#1E2D48', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '14px' }}>
+                <p style={{ fontSize: '0.68rem', color: '#2E1C10', letterSpacing: '0.09em', textTransform: 'uppercase', marginBottom: '12px' }}>
                   More locations
                 </p>
               )}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(min(160px, 100%), 1fr))',
-                gap: '8px',
-              }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {unscored.map(loc => (
                   <Link
                     key={loc.id}
                     href={`/sunset/${loc.slug}`}
-                    style={{
-                      display: 'block',
-                      padding: '14px 16px',
-                      border: '1px solid rgba(255,255,255,0.04)',
-                      borderRadius: '10px',
-                      textDecoration: 'none',
-                      transition: 'border-color 0.15s',
-                    }}
-                    className="hover:border-[rgba(255,255,255,0.09)]"
+                    style={{ padding: '9px 14px', border: '1px solid rgba(200,140,60,0.08)', borderRadius: '8px', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 500, color: '#504840' }}
                   >
-                    <div style={{ fontSize: '0.88rem', fontWeight: 500, color: '#4A5872' }}>
-                      {loc.name}
-                    </div>
-                    <div style={{ fontSize: '0.7rem', color: '#1E2D48', marginTop: '2px' }}>
-                      {loc.region ?? loc.country}
-                    </div>
+                    {loc.name}
                   </Link>
                 ))}
               </div>
@@ -276,73 +104,90 @@ export default async function HomePage() {
           )}
 
           {sorted.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '80px 0', color: '#1E2D48', fontSize: '0.9rem' }}>
+            <div style={{ textAlign: 'center', padding: '60px 0', color: '#2E1C10', fontSize: '0.88rem', fontStyle: 'italic', fontFamily: 'var(--font-display)' }}>
               No locations found. Run the seed script to populate UK locations.
             </div>
           )}
         </div>
       </section>
 
-      {/* ── How it works ── */}
+      {/* ── UK HEATMAP ── */}
+      {scored.length > 0 && (
+        <section
+          aria-label="UK sunset map"
+          style={{ background: '#0C0908', borderTop: '1px solid rgba(200,140,60,0.06)', padding: 'clamp(48px, 6vw, 72px) var(--px)' }}
+        >
+          <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(32px, 5vw, 64px)', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 'clamp(200px, 38vw, 300px)', flexShrink: 0 }}>
+                <UKHeatmap
+                  locations={sorted.map(loc => ({
+                    id:        loc.id,
+                    name:      loc.name,
+                    slug:      loc.slug,
+                    latitude:  loc.latitude,
+                    longitude: loc.longitude,
+                    score:     forecastMap.get(loc.id)?.score ?? null,
+                    quality:   forecastMap.get(loc.id)?.quality ?? null,
+                  }))}
+                />
+              </div>
+
+              <div style={{ maxWidth: '300px' }}>
+                <h2 className="font-display" style={{ fontSize: 'clamp(1.2rem, 2.5vw, 1.5rem)', fontWeight: 700, fontStyle: 'italic', color: '#EDE0C0', letterSpacing: '-0.01em', marginBottom: '20px' }}>
+                  Where to watch tonight
+                </h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+                  {[
+                    { quality: 'excellent', label: 'Excellent', color: '#F0B830' },
+                    { quality: 'great',     label: 'Great',     color: '#C8701A' },
+                    { quality: 'good',      label: 'Good',      color: '#5FAA88' },
+                    { quality: 'fair',      label: 'Fair',      color: '#8890B8' },
+                    { quality: 'poor',      label: 'Poor',      color: '#504840' },
+                  ].map(({ quality, label, color }) => {
+                    const count = scored.filter(l => forecastMap.get(l.id)?.quality === quality).length
+                    if (count === 0) return null
+                    return (
+                      <div key={quality} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: color, flexShrink: 0, boxShadow: `0 0 5px 2px ${color}55` }} />
+                        <span style={{ fontSize: '0.82rem', color: '#5A4030' }}>
+                          {label}
+                          <span style={{ color: '#2E1C10', marginLeft: '6px' }}>· {count} {count === 1 ? 'location' : 'locations'}</span>
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+                <p style={{ fontSize: '0.75rem', color: '#2E1C10', lineHeight: 1.7, margin: 0 }}>
+                  Scores update every two hours using real-time cloud and visibility data from Open-Meteo.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── HOW IT WORKS ── */}
       <section
         aria-label="How it works"
-        style={{
-          background: '#080c18',
-          borderTop: '1px solid rgba(255,255,255,0.04)',
-          padding: 'clamp(48px, 6vw, 80px) var(--px)',
-        }}
+        style={{ background: '#0C0908', borderTop: '1px solid rgba(200,140,60,0.06)', padding: 'clamp(48px, 6vw, 72px) var(--px)' }}
       >
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <h2 className="font-display" style={{
-            fontSize: 'clamp(1.3rem, 2.5vw, 1.6rem)',
-            fontWeight: 700,
-            fontStyle: 'italic',
-            color: '#E8E2D4',
-            letterSpacing: '-0.01em',
-            marginBottom: '40px',
-          }}>
+          <h2 className="font-display" style={{ fontSize: 'clamp(1.2rem, 2.5vw, 1.5rem)', fontWeight: 700, fontStyle: 'italic', color: '#EDE0C0', letterSpacing: '-0.01em', marginBottom: '36px' }}>
             What goes into the score
           </h2>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))',
-            gap: '40px',
-          }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '36px' }}>
             {[
-              {
-                label: 'High cloud',
-                body: '35–70% coverage of thin cloud high up is the sweet spot. It catches and scatters the sunlight into colour. Clear sky or thick cloud both produce muted sunsets.',
-              },
-              {
-                label: 'Low cloud',
-                body: 'Even a thin band of low cloud sitting on the western horizon will block the most important part of the show. We score this heavily.',
-              },
-              {
-                label: 'Atmosphere',
-                body: 'Dust, humidity, and aerosols in the lower atmosphere scatter short wavelengths and push light toward deep reds and oranges. Some haze helps.',
-              },
-              {
-                label: 'Visibility',
-                body: 'Clear air lets colour travel further across the sky. We combine meteorological visibility with atmospheric transparency to estimate how far the colours will reach.',
-              },
+              { label: 'High cloud',  body: '35–70% coverage of thin cloud high up is the sweet spot. It catches and scatters sunlight into colour. Clear sky or thick cloud both produce muted sunsets.' },
+              { label: 'Low cloud',   body: 'Even a thin band sitting on the western horizon will block the most important part of the show. We score this heavily.' },
+              { label: 'Atmosphere', body: 'Dust, humidity, and aerosols scatter short wavelengths and push light toward deep reds and oranges. Some haze helps.' },
+              { label: 'Visibility', body: 'Clear air lets colour travel further. We combine meteorological visibility with atmospheric transparency to estimate how far colours will reach.' },
             ].map(item => (
               <div key={item.label}>
-                <div style={{
-                  fontSize: '0.68rem',
-                  fontWeight: 700,
-                  letterSpacing: '0.12em',
-                  textTransform: 'uppercase',
-                  color: '#E07540',
-                  marginBottom: '12px',
-                }}>
+                <div style={{ fontSize: '0.62rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C8701A', marginBottom: '10px' }}>
                   {item.label}
                 </div>
-                <p style={{
-                  fontSize: '0.85rem',
-                  color: '#3D4E6A',
-                  lineHeight: 1.7,
-                  margin: 0,
-                }}>
+                <p style={{ fontSize: '0.84rem', color: '#5A4030', lineHeight: 1.75, margin: 0 }}>
                   {item.body}
                 </p>
               </div>
@@ -351,30 +196,15 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── Footer ── */}
-      <footer style={{
-        background: '#080c18',
-        borderTop: '1px solid rgba(255,255,255,0.04)',
-        padding: '28px var(--px)',
-      }}>
-        <div style={{
-          maxWidth: '1100px',
-          margin: '0 auto',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px',
-        }}
+      {/* ── FOOTER ── */}
+      <footer style={{ background: '#0C0908', borderTop: '1px solid rgba(200,140,60,0.06)', padding: '28px var(--px)' }}>
+        <div
+          style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}
           className="footer-inner"
         >
-          <span style={{ fontSize: '0.72rem', color: '#1E2D48' }}>
-            {APP_NAME} · UK sunset forecasting
-          </span>
+          <span style={{ fontSize: '0.72rem', color: '#2E1C10' }}>{APP_NAME} · UK sunset forecasting</span>
           <EmailSubscribeForm />
-          <span style={{ fontSize: '0.72rem', color: '#1E2D48' }}>
-            Weather: Open-Meteo · Astronomy: suncalc
-          </span>
+          <span style={{ fontSize: '0.72rem', color: '#2E1C10' }}>Weather: Open-Meteo · Astronomy: suncalc</span>
         </div>
       </footer>
     </>

@@ -1,58 +1,59 @@
 @import "tailwindcss";
 
-/* ─── Design tokens ──────────────────────────────────────────────────────── */
+/* ─── Turner Sky · Afterglow ─────────────────────────────────────────────── */
 :root {
-  /* Base canvas */
-  --ground:        #080c18;
-  --surface:       #0e1424;
-  --surface-2:     #131c30;
-  --surface-3:     #1a2540;
+  /* Ground — deep umber, not navy; the earth before dawn */
+  --ground:        #0C0908;
+  --surface:       #181008;
+  --surface-2:     #221608;
+  --surface-3:     #2A1C0C;
 
-  /* Text */
-  --text:          #E8E2D4;
-  --text-2:        #8A96B4;
-  --text-3:        #3D4E6A;
-  --text-4:        #1E2D48;
+  /* Text — warm off-white, ochre-tinted */
+  --text:          #EDE0C0;
+  --text-2:        #9A8060;
+  --text-3:        #5A4030;
+  --text-4:        #2E1C10;
 
-  /* Accent */
-  --accent:        #E07540;
-  --accent-dim:    rgba(224, 117, 64, 0.18);
-  --accent-border: rgba(224, 117, 64, 0.28);
+  /* Accent — amber and gold, the afterglow itself */
+  --accent:        #C8701A;
+  --accent-bright: #F0B830;
+  --accent-dim:    rgba(200, 112, 26, 0.14);
+  --accent-border: rgba(200, 112, 26, 0.24);
 
-  /* Quality — score ring + badge colours */
-  --q-excellent:   #F5A828;
-  --q-great:       #E07540;
+  /* Quality — warm spectrum, scored by fire */
+  --q-excellent:   #F0B830;
+  --q-great:       #C8701A;
   --q-good:        #5FAA88;
-  --q-fair:        #7A8DB8;
-  --q-poor:        #4A5872;
+  --q-fair:        #8890B8;
+  --q-poor:        #504840;
 
-  /* Borders */
-  --border:        rgba(255, 255, 255, 0.06);
-  --border-2:      rgba(255, 255, 255, 0.10);
+  /* Borders — barely-there warm gold */
+  --border:        rgba(200, 140, 60, 0.08);
+  --border-2:      rgba(200, 140, 60, 0.16);
 
   /* Shadows */
-  --shadow-card:   0 2px 20px rgba(0, 0, 0, 0.5);
-  --shadow-score:  0 0 60px rgba(224, 117, 64, 0.15);
+  --shadow-card:   0 2px 24px rgba(0, 0, 0, 0.6);
+  --shadow-score:  0 0 80px rgba(200, 112, 26, 0.2);
 
   /* Radii */
   --radius:        16px;
   --radius-sm:     10px;
   --radius-xs:     6px;
 
-  /* Page horizontal padding — responsive */
+  /* Page horizontal padding */
   --px:            clamp(20px, 5vw, 48px);
 
   /* Font aliases */
-  --font-sans:    var(--font-geist-sans);
-  --font-mono:    var(--font-geist-mono);
-  --font-display: var(--font-fraunces);
+  --font-sans:    var(--font-work-sans, system-ui, sans-serif);
+  --font-mono:    var(--font-jetbrains-mono, ui-monospace, monospace);
+  --font-display: var(--font-bodoni-moda, Georgia, serif);
 }
 
 @theme inline {
   --color-background: var(--ground);
   --color-foreground: var(--text);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-work-sans, system-ui, sans-serif);
+  --font-mono: var(--font-jetbrains-mono, ui-monospace, monospace);
 }
 
 /* ─── Reset ──────────────────────────────────────────────────────────────── */
@@ -69,7 +70,7 @@ html {
 body {
   background: var(--ground);
   color: var(--text);
-  font-family: var(--font-sans, system-ui, sans-serif);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100dvh;
@@ -77,23 +78,46 @@ body {
 
 a { color: inherit; }
 
-/* ─── Scrollbar — hide in forecast strip ─────────────────────────────────── */
+/* ─── Browser surfaces — all tinted from the amber palette ──────────────── */
+::selection {
+  background: rgba(200, 112, 26, 0.32);
+  color: #F0B830;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(200, 112, 26, 0.22);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(200, 112, 26, 0.4); }
+
+:focus-visible {
+  outline: 2px solid rgba(200, 112, 26, 0.7);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+/* ─── Scrollbar hide utility ─────────────────────────────────────────────── */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 
+/* ─── Display font helper ────────────────────────────────────────────────── */
+.font-display {
+  font-family: var(--font-display, Georgia, serif);
+}
+
 /* ─── Animations ─────────────────────────────────────────────────────────── */
 
-/* Score ring fill — driven by --ring-target CSS var on the element */
 @keyframes ring-fill {
   to { stroke-dashoffset: var(--ring-target); }
 }
 
-/* Page entrance */
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(16px); }
+  from { opacity: 0; transform: translateY(20px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
@@ -102,36 +126,32 @@ a { color: inherit; }
   to   { opacity: 1; }
 }
 
-/* Conditions bar fill */
 @keyframes bar-fill {
   from { width: 0; }
   to   { width: var(--bar-width); }
 }
 
-/* Horizon ambient glow pulse (hero) */
-@keyframes horizon-pulse {
-  0%, 100% { opacity: 0.7; transform: translateX(-50%) scale(1); }
-  50%       { opacity: 1.0; transform: translateX(-50%) scale(1.08); }
+@keyframes horizon-breathe {
+  0%, 100% { opacity: 0.65; transform: translateX(-50%) scaleX(1); }
+  50%       { opacity: 0.9;  transform: translateX(-50%) scaleX(1.06); }
 }
 
-/* Utility classes */
 .anim-fade-up {
-  animation: fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: fade-up 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-
 .anim-fade-in {
-  animation: fade-in 0.4s ease both;
+  animation: fade-in 0.5s ease both;
 }
 
-/* Staggered entrance for grids */
+/* Staggered entrance */
 .anim-stagger > *:nth-child(1)  { animation-delay: 0ms;   }
-.anim-stagger > *:nth-child(2)  { animation-delay: 50ms;  }
-.anim-stagger > *:nth-child(3)  { animation-delay: 100ms; }
-.anim-stagger > *:nth-child(4)  { animation-delay: 150ms; }
-.anim-stagger > *:nth-child(5)  { animation-delay: 200ms; }
-.anim-stagger > *:nth-child(6)  { animation-delay: 250ms; }
-.anim-stagger > *:nth-child(7)  { animation-delay: 300ms; }
-.anim-stagger > *:nth-child(8)  { animation-delay: 350ms; }
+.anim-stagger > *:nth-child(2)  { animation-delay: 60ms;  }
+.anim-stagger > *:nth-child(3)  { animation-delay: 120ms; }
+.anim-stagger > *:nth-child(4)  { animation-delay: 180ms; }
+.anim-stagger > *:nth-child(5)  { animation-delay: 240ms; }
+.anim-stagger > *:nth-child(6)  { animation-delay: 300ms; }
+.anim-stagger > *:nth-child(7)  { animation-delay: 360ms; }
+.anim-stagger > *:nth-child(8)  { animation-delay: 420ms; }
 
 /* ─── Sun scene animations ───────────────────────────────────────────────── */
 
@@ -155,7 +175,6 @@ a { color: inherit; }
   50%       { transform: translate(-50%, -50%) scale(1.18); }
 }
 
-/* Disc-specific variants — no translate needed (disc is position:relative, not centred via left/top) */
 @keyframes sun-disc-pulse {
   0%, 100% { transform: scale(1); }
   50%       { transform: scale(1.07); }
@@ -171,55 +190,206 @@ a { color: inherit; }
   50%       { opacity: calc(var(--star-base-opacity) * 0.3); }
 }
 
+@keyframes cloud-sway-r {
+  0%, 100% { transform: translateX(0px); }
+  50%       { transform: translateX(38px); }
+}
+
+@keyframes cloud-sway-l {
+  0%, 100% { transform: translateX(0px); }
+  50%       { transform: translateX(-38px); }
+}
+
+@keyframes sun-cartoon-pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50%       { transform: translate(-50%, -50%) scale(1.06); }
+}
+@keyframes sun-cartoon-alert {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50%       { transform: translate(-50%, -50%) scale(1.16); }
+}
+
+.crepuscular-rays {
+  animation: rays-spin 120s linear infinite;
+}
+
+@keyframes float-up {
+  0%   { transform: translateY(0px)    translateX(0px);             opacity: 0; }
+  8%   { opacity: var(--ep-op); }
+  88%  { opacity: var(--ep-op); }
+  100% { transform: translateY(-220px) translateX(var(--ep-dx, 0px)); opacity: 0; }
+}
+@keyframes rays-spin {
+  to { transform: rotate(360deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .sun-disc, .sun-ring, .sun-rays { animation: none !important; }
+  .sun-disc, .sun-ring, .sun-rays, .crepuscular-rays { animation: none !important; }
+  [style*="cloud-sway"] { animation: none !important; }
 }
 
-/* Focus visible */
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
-  border-radius: 4px;
-}
-
-/* ─── Film grain overlay — makes gradients photographic ─────────────────── */
+/* ─── Film grain — makes gradients photographic ──────────────────────────── */
 .grain::after {
   content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.055;
+  opacity: 0.11;
   background-image:
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  background-size: 200px 200px;
-  mix-blend-mode: overlay;
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  mix-blend-mode: soft-light;
 }
 
-/* ─── Display font helper ────────────────────────────────────────────────── */
-.font-display {
-  font-family: var(--font-display, Georgia, serif);
-}
-
-/* ─── Score top-pick pill in hero ────────────────────────────────────────── */
+/* ─── Top-pick pill ──────────────────────────────────────────────────────── */
 .top-pick-pill {
   display: inline-flex;
   align-items: center;
   gap: 10px;
   padding: 8px 18px 8px 10px;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(200, 112, 26, 0.08);
+  border: 1px solid rgba(200, 112, 26, 0.2);
   border-radius: 99px;
   text-decoration: none;
   backdrop-filter: blur(8px);
   transition: background 0.15s, border-color 0.15s;
 }
 .top-pick-pill:hover {
-  background: rgba(255, 255, 255, 0.11);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(200, 112, 26, 0.14);
+  border-color: rgba(200, 112, 26, 0.36);
+}
+
+/* ─── Hero 3-column overlay ──────────────────────────────────────────────── */
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 65;
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: 244px 1fr 264px;
+  gap: 20px;
+  padding: 76px 32px max(200px, 15vw);
+  align-items: stretch;
+}
+
+/* Sidebar panels — warm umber glass, not cold blue */
+.hero-sidebar {
+  pointer-events: auto;
+  background: rgba(12, 8, 4, 0.72);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(200, 140, 60, 0.1);
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.hero-right {
+  pointer-events: auto;
+  background: rgba(12, 8, 4, 0.72);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(200, 140, 60, 0.1);
+  border-radius: 20px;
+  overflow: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.hero-right::-webkit-scrollbar { display: none; }
+
+.hero-center {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 0 20px 64px;
+}
+
+/* Score numeral — Bodoni Moda italic, vast */
+.hero-score-num {
+  font-family: var(--font-display, Georgia, serif);
+  font-style: italic;
+  font-weight: 700;
+  font-size: clamp(88px, 14vw, 188px);
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  margin-bottom: 10px;
+  font-variant-numeric: lining-nums;
+}
+
+/* ── Sidebar hover row ────────────────────────────────────────────────────── */
+.sidebar-loc-row:hover {
+  background: rgba(200, 112, 26, 0.07) !important;
+}
+
+@media (max-width: 1100px) {
+  .hero-overlay {
+    grid-template-columns: 1fr 244px;
+    padding: 76px 24px 200px;
+    gap: 16px;
+  }
+  .hero-sidebar { display: none; }
+}
+
+@media (max-width: 720px) {
+  .hero-overlay {
+    grid-template-columns: 1fr;
+    padding: 76px 20px 240px;
+    gap: 12px;
+  }
+  .hero-right  { display: none; }
+  .hero-center { padding: 0 0 48px; }
+  .hero-score-num { font-size: clamp(76px, 24vw, 120px); }
 }
 
 /* ─── Mobile responsive ─────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .nav-how-it-works { display: none; }
   .footer-inner { flex-direction: column !important; align-items: flex-start !important; }
+}
+
+/* ─── Week score chart ───────────────────────────────────────────────────── */
+@keyframes score-chart-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes score-dot-in {
+  to { opacity: 1; }
+}
+.score-chart-line {
+  animation: score-chart-draw 1.8s cubic-bezier(0.4, 0, 0.2, 1) 0.15s forwards;
+}
+
+/* Chart container — full width, below the sidebar/panel overlay so panels sit on top */
+.hero-chart-wrap {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 64;
+  padding: 0 clamp(24px, 4vw, 56px) 20px;
+  pointer-events: none;
+}
+
+/* Sidebar interactive row */
+.sidebar-row-select {
+  appearance: none;
+  -webkit-appearance: none;
+}
+.sidebar-row-select:hover ~ .sidebar-star-btn,
+.sidebar-row-select:focus-visible {
+  outline: none;
+}
+.sidebar-star-btn:hover {
+  color: #F0B830 !important;
+}
+
+/* ─── Notify modal animations ────────────────────────────────────────────── */
+@keyframes notify-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes notify-up {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 18px)); }
+  to   { opacity: 1; transform: translate(-50%, -50%); }
 }

@@ -11,14 +11,14 @@ const FACTOR_LABELS: Record<keyof ScoreBreakdown, string> = {
 }
 
 function barColor(pct: number): string {
-  if (pct >= 75) return '#D4854A'
-  if (pct >= 50) return '#4A9B6F'
-  return '#2A3A56'
+  if (pct >= 75) return '#C8701A'
+  if (pct >= 50) return '#5FAA88'
+  return '#504840'
 }
 
 interface Props {
   breakdown: ScoreBreakdown
-  isPro?: boolean
+  isPro?:    boolean
 }
 
 export function BreakdownPanel({ breakdown, isPro = false }: Props) {
@@ -31,34 +31,37 @@ export function BreakdownPanel({ breakdown, isPro = false }: Props) {
         return (
           <div key={key}>
             <div style={{
-              display: 'flex',
+              display:        'flex',
               justifyContent: 'space-between',
-              alignItems: 'baseline',
-              marginBottom: '5px',
+              alignItems:     'baseline',
+              marginBottom:   '5px',
             }}>
-              <span style={{ fontSize: '0.8rem', color: '#6B7A9E' }}>
+              <span style={{ fontSize: '0.8rem', color: '#9A8060' }}>
                 {FACTOR_LABELS[key]}
               </span>
               <span style={{
-                fontSize: '0.75rem',
+                fontSize:   '0.75rem',
                 fontFamily: 'var(--font-mono, ui-monospace, monospace)',
-                color: pct >= 70 ? '#D4854A' : '#3D4E6E',
+                color:      pct >= 70 ? '#C8701A' : '#5A4030',
               }}>
                 {pct}%
               </span>
             </div>
             <div style={{
-              height: '4px',
-              background: '#1A2845',
-              borderRadius: '2px',
-              overflow: 'hidden',
+              height:          '3px',
+              background:      'rgba(200,140,60,0.10)',
+              borderRadius:    '2px',
+              overflow:        'hidden',
+              position:        'relative',
             }}>
               <div style={{
-                height: '100%',
-                width: `${pct}%`,
-                background: barColor(pct),
-                borderRadius: '2px',
-                transition: 'width 0.6s ease',
+                position:        'absolute',
+                inset:           0,
+                background:      barColor(pct),
+                borderRadius:    '2px',
+                transformOrigin: 'left',
+                transform:       `scaleX(${pct / 100})`,
+                transition:      'transform 0.6s ease',
               }} />
             </div>
           </div>
@@ -70,36 +73,36 @@ export function BreakdownPanel({ breakdown, isPro = false }: Props) {
   if (!isPro) {
     return (
       <div style={{ position: 'relative' }}>
-        <div style={{ filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none', opacity: 0.6 }}>
+        <div style={{ filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none', opacity: 0.5 }}>
           {bars}
         </div>
         <div style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
+          position:       'absolute',
+          inset:          0,
+          display:        'flex',
+          flexDirection:  'column',
+          alignItems:     'center',
           justifyContent: 'center',
         }}>
           <div style={{
-            background: 'rgba(10,16,30,0.92)',
-            border: '1px solid rgba(212,133,74,0.30)',
-            borderRadius: '10px',
-            padding: '14px 22px',
-            textAlign: 'center',
-            backdropFilter: 'blur(6px)',
+            background:     'rgba(12,9,8,0.90)',
+            border:         '1px solid rgba(200,112,26,0.28)',
+            borderRadius:   '10px',
+            padding:        '14px 22px',
+            textAlign:      'center',
+            backdropFilter: 'blur(8px)',
           }}>
             <div style={{
-              fontSize: '0.58rem',
-              fontWeight: 700,
+              fontSize:      '0.58rem',
+              fontWeight:    700,
               letterSpacing: '0.14em',
               textTransform: 'uppercase',
-              color: '#E07540',
-              marginBottom: '5px',
+              color:         '#C8701A',
+              marginBottom:  '5px',
             }}>
               Pro
             </div>
-            <div style={{ fontSize: '0.82rem', color: '#C0BAB0', fontWeight: 500 }}>
+            <div style={{ fontSize: '0.82rem', color: '#9A8060', fontWeight: 500 }}>
               Unlock the full breakdown
             </div>
           </div>

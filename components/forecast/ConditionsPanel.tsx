@@ -2,51 +2,51 @@ import type { SunsetForecast } from '@/types'
 import { formatVisibility } from '@/lib/utils/format'
 
 interface ConditionRow {
-  label: string
-  value: string
-  barPct: number
+  label:   string
+  value:   string
+  barPct:  number
   quality: 'good' | 'neutral' | 'bad'
-  note: string
+  note:    string
 }
 
 function highCloudNote(pct: number | null): { note: string; quality: 'good' | 'neutral' | 'bad' } {
-  if (pct == null) return { note: '—', quality: 'neutral' }
-  if (pct >= 35 && pct <= 70) return { note: 'Ideal for catching colour', quality: 'good' }
-  if (pct > 70)               return { note: 'Getting thick — may reduce colour', quality: 'neutral' }
-  if (pct < 8)                return { note: 'Clear sky — colours may be muted', quality: 'neutral' }
-  return { note: 'Some high cloud present', quality: 'neutral' }
+  if (pct == null)                       return { note: '—', quality: 'neutral' }
+  if (pct >= 35 && pct <= 70)            return { note: 'Ideal for catching colour', quality: 'good' }
+  if (pct > 70)                          return { note: 'Getting thick — may reduce colour', quality: 'neutral' }
+  if (pct < 8)                           return { note: 'Clear sky — colours may be muted', quality: 'neutral' }
+  return                                        { note: 'Some high cloud present', quality: 'neutral' }
 }
 
 function lowCloudNote(pct: number | null): { note: string; quality: 'good' | 'neutral' | 'bad' } {
   if (pct == null) return { note: '—', quality: 'neutral' }
-  if (pct <= 8)   return { note: 'Clear horizon', quality: 'good' }
-  if (pct <= 25)  return { note: 'Mostly clear', quality: 'good' }
-  if (pct <= 50)  return { note: 'Some patches near the horizon', quality: 'neutral' }
-  if (pct <= 75)  return { note: 'Likely to obstruct the view', quality: 'bad' }
-  return { note: 'Will block the horizon', quality: 'bad' }
+  if (pct <= 8)    return { note: 'Clear horizon', quality: 'good' }
+  if (pct <= 25)   return { note: 'Mostly clear', quality: 'good' }
+  if (pct <= 50)   return { note: 'Some patches near the horizon', quality: 'neutral' }
+  if (pct <= 75)   return { note: 'Likely to obstruct the view', quality: 'bad' }
+  return                  { note: 'Will block the horizon', quality: 'bad' }
 }
 
 function rainNote(pct: number | null): { note: string; quality: 'good' | 'neutral' | 'bad' } {
   if (pct == null) return { note: '—', quality: 'neutral' }
-  if (pct <= 8)  return { note: 'Minimal risk', quality: 'good' }
-  if (pct <= 25) return { note: 'Low chance', quality: 'good' }
-  if (pct <= 50) return { note: 'Some risk — check before heading out', quality: 'neutral' }
-  return { note: 'Significant chance of rain', quality: 'bad' }
+  if (pct <= 8)    return { note: 'Minimal risk', quality: 'good' }
+  if (pct <= 25)   return { note: 'Low chance', quality: 'good' }
+  if (pct <= 50)   return { note: 'Some risk — check before heading out', quality: 'neutral' }
+  return                  { note: 'Significant chance of rain', quality: 'bad' }
 }
 
 function visibilityNote(m: number | null): { note: string; quality: 'good' | 'neutral' | 'bad' } {
-  if (m == null)   return { note: '—', quality: 'neutral' }
-  if (m >= 20000)  return { note: 'Excellent', quality: 'good' }
-  if (m >= 10000)  return { note: 'Good', quality: 'good' }
-  if (m >= 5000)   return { note: 'Moderate', quality: 'neutral' }
-  if (m >= 2000)   return { note: 'Reduced — haze likely', quality: 'bad' }
-  return { note: 'Poor — fog or heavy haze', quality: 'bad' }
+  if (m == null)  return { note: '—', quality: 'neutral' }
+  if (m >= 20000) return { note: 'Excellent', quality: 'good' }
+  if (m >= 10000) return { note: 'Good', quality: 'good' }
+  if (m >= 5000)  return { note: 'Moderate', quality: 'neutral' }
+  if (m >= 2000)  return { note: 'Reduced — haze likely', quality: 'bad' }
+  return                 { note: 'Poor — fog or heavy haze', quality: 'bad' }
 }
 
 const BAR_COLORS = {
   good:    '#5FAA88',
-  neutral: '#7A8DB8',
-  bad:     '#C44848',
+  neutral: '#8890B8',
+  bad:     '#B04038',
 }
 
 interface Props {
@@ -108,43 +108,33 @@ export function ConditionsPanel({ forecast }: Props) {
           key={row.label}
           style={{
             padding: '16px 0',
-            borderBottom: i < rows.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+            borderBottom: i < rows.length - 1 ? '1px solid rgba(200,140,60,0.07)' : 'none',
           }}
         >
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            marginBottom: '7px',
-          }}>
-            {/* Label */}
-            <span style={{
-              fontSize: '0.82rem',
-              color: '#8A96B4',
-              width: '90px',
-              flexShrink: 0,
-            }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '7px' }}>
+            <span style={{ fontSize: '0.82rem', color: '#9A8060', width: '90px', flexShrink: 0 }}>
               {row.label}
             </span>
 
-            {/* Bar track */}
             <div style={{
               flex: 1,
-              height: '4px',
-              background: 'rgba(255,255,255,0.06)',
+              height: '3px',
+              background: 'rgba(200,140,60,0.10)',
               borderRadius: '2px',
               overflow: 'hidden',
+              position: 'relative',
             }}>
               <div style={{
-                height: '100%',
-                width: `${row.barPct}%`,
+                position: 'absolute',
+                inset: 0,
                 background: BAR_COLORS[row.quality],
                 borderRadius: '2px',
-                transition: 'width 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+                transformOrigin: 'left',
+                transform: `scaleX(${row.barPct / 100})`,
+                transition: 'transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
               }} />
             </div>
 
-            {/* Value */}
             <span style={{
               fontSize: '0.85rem',
               fontWeight: 600,
@@ -158,13 +148,7 @@ export function ConditionsPanel({ forecast }: Props) {
             </span>
           </div>
 
-          {/* Context note */}
-          <div style={{
-            paddingLeft: '102px',
-            fontSize: '0.72rem',
-            color: '#3D4E6A',
-            lineHeight: 1.4,
-          }}>
+          <div style={{ paddingLeft: '102px', fontSize: '0.72rem', color: '#5A4030', lineHeight: 1.4 }}>
             {row.note}
           </div>
         </div>
