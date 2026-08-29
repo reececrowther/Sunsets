@@ -335,7 +335,7 @@ a { color: inherit; }
 @media (max-width: 720px) {
   .hero-overlay {
     grid-template-columns: 1fr;
-    padding: 76px 20px 240px;
+    padding: 76px 20px 280px;
     gap: 12px;
   }
   .hero-right  { display: none; }
@@ -392,4 +392,108 @@ a { color: inherit; }
 @keyframes notify-up {
   from { opacity: 0; transform: translate(-50%, calc(-50% + 18px)); }
   to   { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+/* ─── Hero times row — responsive layout ────────────────────────────────── */
+.hero-times-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+}
+.hero-times-blocks {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+}
+.hero-forecast-link {
+  margin-left: auto;
+  padding-bottom: 2px;
+  pointer-events: auto;
+}
+
+@media (max-width: 640px) {
+  .hero-times-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .hero-forecast-link {
+    margin-left: 0;
+    width: 100%;
+  }
+  .hero-forecast-link a {
+    display: flex !important;
+    width: 100% !important;
+    justify-content: center !important;
+    box-sizing: border-box;
+  }
+}
+
+/* ─── Mobile locations button ────────────────────────────────────────────── */
+.mobile-locations-btn {
+  display: none;
+}
+
+@media (max-width: 1100px) {
+  .mobile-locations-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 22px;
+    padding: 11px 20px;
+    background: rgba(12, 8, 4, 0.72);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(200, 140, 60, 0.22);
+    border-radius: 99px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #EDE0C0;
+    cursor: pointer;
+    font-family: var(--font-sans, system-ui);
+    pointer-events: auto;
+    letter-spacing: 0.01em;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .mobile-locations-btn:hover {
+    background: rgba(22, 14, 8, 0.88);
+    border-color: rgba(200, 140, 60, 0.40);
+  }
+}
+
+/* ─── Mobile location sheet ──────────────────────────────────────────────── */
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes sheet-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.mobile-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(6, 4, 3, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: sheet-fade 0.20s ease both;
+}
+
+.mobile-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 301;
+  background: #0E0906;
+  border-top: 1px solid rgba(200, 140, 60, 0.16);
+  border-radius: 24px 24px 0 0;
+  max-height: 80svh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: sheet-up 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  box-shadow: 0 -24px 80px rgba(0, 0, 0, 0.6);
 }

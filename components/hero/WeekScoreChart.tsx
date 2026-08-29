@@ -1,3 +1,6 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import type { SunsetForecast, SunsetQuality } from '@/types'
 
 const Q_COLOR: Record<SunsetQuality, string> = {
@@ -28,8 +31,8 @@ function smoothPath(pts: Array<{ x: number; y: number }>): string {
   return d
 }
 
-function fillPath(linePath: string, W: number, H: number): string {
-  return `${linePath} L ${W - 110} ${H} L 110 ${H} Z`
+function fillPath(linePath: string, W: number, H: number, PX: number): string {
+  return `${linePath} L ${W - PX} ${H} L ${PX} ${H} Z`
 }
 
 function dayLabel(ds: string): string {
@@ -42,21 +45,50 @@ interface Props {
 }
 
 export function WeekScoreChart({ forecasts }: Props) {
-  if (forecasts.length === 0) return null
+  const [isMobile, setIsMobile] = useState(false)
 
-  const n  = forecasts.length
-  const W  = 1000
-  const H  = 140
-  const PX = 110       // inner x padding — keeps labels clear of sidebar panels
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 720)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  // Mobile: today + tomorrow only; desktop: full week
+  const data = forecasts.slice(0, isMobile ? 2 : forecasts.length)
+  if (data.length === 0) return null
+
+  const n = data.length
+
+  // ── Responsive canvas dimensions ──────────────────────────────────────────
+  // Mobile viewBox 400×240 renders at ~390×234px on a 390px screen — legible.
+  // Desktop viewBox 1000×140 is the original compact strip behind the panels.
+  const W   = isMobile ? 400  : 1000
+  const H   = isMobile ? 240  : 140
+  const PX  = isMobile ? 40   : 110    // inner x padding
+  const yHi = isMobile ? 54   : 26     // top of score range (y-coord)
+  const yLo = isMobile ? 166  : 96     // bottom of score range (y-coord)
+
+  // Font & node sizes — all in SVG units so they scale with the viewBox
+  const labelFontSize  = isMobile ? 16   : 10.5
+  const scoreFsToday   = isMobile ? 30   : 17
+  const scoreFsOther   = isMobile ? 21   : 12.5
+  const rTodayBloom    = isMobile ? 26   : 18
+  const rTodayHalo     = isMobile ? 14   : 10
+  const rTodayDisc     = isMobile ? 9    : 6.5
+  const rTodayCap      = isMobile ? 3.2  : 2.4
+  const rOtherBloom    = isMobile ? 16   : 11
+  const rOtherHalo     = isMobile ? 9    : 6
+  const rOtherDisc     = isMobile ? 5.5  : 4
+  const rOtherCap      = isMobile ? 2    : 1.4
+  const strokeW        = isMobile ? 2.4  : 1.8
 
   // Dynamic y range: zoom into the actual score band so variation is always visible
-  const rawScores = forecasts.map(f => f.score ?? 50)
+  const rawScores = data.map(f => f.score ?? 50)
   const dataMin   = Math.max(0,   Math.min(...rawScores) - 15)
   const dataMax   = Math.min(100, Math.max(...rawScores) + 15)
-  const yHi = 26       // y-coordinate for the top of the score range
-  const yLo = 96       // y-coordinate for the bottom
 
-  const pts = forecasts.map((f, i) => {
+  const pts = data.map((f, i) => {
     const score = f.score ?? (dataMin + dataMax) / 2
     const yFrac = (score - dataMin) / (dataMax - dataMin)
     return {
@@ -69,16 +101,16 @@ export function WeekScoreChart({ forecasts }: Props) {
     }
   })
 
-  const linePath  = smoothPath(pts)
-  const areaPath  = n > 1 ? fillPath(linePath, W, H) : ''
-  const gradId    = 'chart-area-fill'
+  const linePath = smoothPath(pts)
+  const areaPath = n > 1 ? fillPath(linePath, W, H, PX) : ''
+  const gradId   = 'chart-area-fill'
 
   return (
     <svg
       viewBox={`0 0 ${W} ${H}`}
       preserveAspectRatio="xMidYMid meet"
       role="img"
-      aria-label="7-day sunset score chart"
+      aria-label={`${n}-day sunset score chart`}
       style={{ width: '100%', height: 'auto', display: 'block', overflow: 'visible' }}
     >
       <defs>
@@ -87,18 +119,14 @@ export function WeekScoreChart({ forecasts }: Props) {
           <stop offset="100%" stopColor="rgba(255,255,255,0.00)" />
         </linearGradient>
         <filter id="dot-glow" x="-150%" y="-150%" width="400%" height="400%">
-          <feGaussianBlur stdDeviation="4" result="blur" />
+          <feGaussianBlur stdDeviation={isMobile ? 5 : 4} result="blur" />
           <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
       </defs>
 
       {/* Soft fill under the spline */}
       {n > 1 && (
-        <path
-          d={areaPath}
-          fill={`url(#${gradId})`}
-          opacity="0.55"
-        />
+        <path d={areaPath} fill={`url(#${gradId})`} opacity="0.55" />
       )}
 
       {/* Day labels */}
@@ -106,12 +134,12 @@ export function WeekScoreChart({ forecasts }: Props) {
         <text
           key={`dl-${i}`}
           x={p.x}
-          y={14}
+          y={labelFontSize + 2}
           textAnchor="middle"
-          fontSize="10.5"
+          fontSize={labelFontSize}
           fontWeight={p.today ? '600' : '400'}
           letterSpacing="0.09em"
-          fill={p.today ? 'rgba(232,226,212,0.88)' : 'rgba(232,226,212,0.28)'}
+          fill={p.today ? 'rgba(232,226,212,0.88)' : 'rgba(232,226,212,0.35)'}
           style={{ textTransform: 'uppercase', fontFamily: 'var(--font-sans, system-ui, sans-serif)' }}
         >
           {dayLabel(p.date)}
@@ -124,7 +152,7 @@ export function WeekScoreChart({ forecasts }: Props) {
           d={linePath}
           fill="none"
           stroke="rgba(255,255,255,0.65)"
-          strokeWidth="1.8"
+          strokeWidth={strokeW}
           strokeLinecap="round"
           strokeLinejoin="round"
           pathLength="1"
@@ -137,6 +165,11 @@ export function WeekScoreChart({ forecasts }: Props) {
       {/* Nodes */}
       {pts.map((p, i) => {
         const col = p.quality ? Q_COLOR[p.quality] : 'rgba(255,255,255,0.5)'
+        const bloom = p.today ? rTodayBloom : rOtherBloom
+        const halo  = p.today ? rTodayHalo  : rOtherHalo
+        const disc  = p.today ? rTodayDisc  : rOtherDisc
+        const cap   = p.today ? rTodayCap   : rOtherCap
+        const capOff = p.today ? disc * 0.28 : disc * 0.30
         return (
           <g
             key={`dot-${i}`}
@@ -146,19 +179,10 @@ export function WeekScoreChart({ forecasts }: Props) {
               animation: `score-dot-in 0.3s ease-out ${0.5 + i * 0.08}s forwards`,
             }}
           >
-            {/* Outer bloom */}
-            <circle cx={p.x} cy={p.y} r={p.today ? 18 : 11} fill={col} opacity="0.12" />
-            {/* Inner halo */}
-            <circle cx={p.x} cy={p.y} r={p.today ? 10 : 6}  fill={col} opacity="0.22" />
-            {/* Main disc */}
-            <circle cx={p.x} cy={p.y} r={p.today ? 6.5 : 4} fill={col} opacity={p.today ? 1 : 0.82} />
-            {/* Specular cap */}
-            <circle
-              cx={p.x - (p.today ? 1.8 : 1.2)}
-              cy={p.y - (p.today ? 1.8 : 1.2)}
-              r={p.today ? 2.4 : 1.4}
-              fill="rgba(255,255,255,0.50)"
-            />
+            <circle cx={p.x} cy={p.y} r={bloom} fill={col} opacity="0.12" />
+            <circle cx={p.x} cy={p.y} r={halo}  fill={col} opacity="0.22" />
+            <circle cx={p.x} cy={p.y} r={disc}  fill={col} opacity={p.today ? 1 : 0.82} />
+            <circle cx={p.x - capOff} cy={p.y - capOff} r={cap} fill="rgba(255,255,255,0.50)" />
           </g>
         )
       })}
@@ -170,12 +194,12 @@ export function WeekScoreChart({ forecasts }: Props) {
           <text
             key={`sv-${i}`}
             x={p.x}
-            y={H - 4}
+            y={H - (isMobile ? 8 : 4)}
             textAnchor="middle"
-            fontSize={p.today ? '17' : '12.5'}
+            fontSize={p.today ? scoreFsToday : scoreFsOther}
             fontWeight={p.today ? '700' : '400'}
             letterSpacing="-0.03em"
-            fill={p.today ? col : 'rgba(232,226,212,0.30)'}
+            fill={p.today ? col : 'rgba(232,226,212,0.40)'}
             style={{
               fontFamily:         'var(--font-sans, system-ui, sans-serif)',
               fontVariantNumeric: 'tabular-nums',

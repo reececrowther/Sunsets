@@ -110,6 +110,7 @@ interface Props {
 export function HeroSection({ locations, forecastRecord, weekForecastsRecord, topId }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(topId)
   const [favourites, setFavourites] = useState<string[]>([])
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
 
   // Hydrate favourites from localStorage and potentially override selectedId
   useEffect(() => {
@@ -123,6 +124,22 @@ export function HeroSection({ locations, forecastRecord, weekForecastsRecord, to
       }
     } catch {}
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Mobile sheet — body scroll lock
+  useEffect(() => {
+    if (!mobileSheetOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [mobileSheetOpen])
+
+  // Mobile sheet — Escape key
+  useEffect(() => {
+    if (!mobileSheetOpen) return
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setMobileSheetOpen(false) }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [mobileSheetOpen])
 
   const toggleFavourite = useCallback((e: React.MouseEvent, id: string) => {
     e.stopPropagation()
@@ -157,7 +174,7 @@ export function HeroSection({ locations, forecastRecord, weekForecastsRecord, to
   const conditions = selectedFc ? buildConditions(selectedFc) : []
 
   // ── Sidebar row renderer ──────────────────────────────────────────────────
-  function SidebarRow({ loc }: { loc: Location }) {
+  function SidebarRow({ loc, onSelect }: { loc: Location; onSelect?: () => void }) {
     const fc         = forecastRecord[loc.id] ?? null
     const sc         = fc?.score ?? null
     const ql         = fc?.quality ?? null
@@ -178,7 +195,7 @@ export function HeroSection({ locations, forecastRecord, weekForecastsRecord, to
       >
         {/* Main select button */}
         <button
-          onClick={() => setSelectedId(loc.id)}
+          onClick={() => { setSelectedId(loc.id); onSelect?.() }}
           style={{
             display:        'flex',
             alignItems:     'center',
@@ -483,32 +500,34 @@ export function HeroSection({ locations, forecastRecord, weekForecastsRecord, to
           )}
 
           {selectedFc && (
-            <div style={{ display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: '0' }}>
-              {([
-                { label: 'Golden Hour', time: selectedFc.goldenHourStart },
-                { label: 'Sunset',      time: selectedFc.sunsetTime      },
-                { label: 'Blue Hour',   time: selectedFc.blueHourEnd     },
-              ] as { label: string; time: string | null }[])
-                .filter(t => t.time)
-                .map((t, i, arr) => (
-                  <div key={t.label} style={{
-                    paddingRight: i < arr.length - 1 ? '22px' : 0,
-                    marginRight:  i < arr.length - 1 ? '22px' : 0,
-                    borderRight:  i < arr.length - 1 ? '1px solid rgba(200,140,60,0.14)' : 'none',
-                  }}>
-                    <div style={{ fontSize: '0.56rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(237,224,192,0.48)', marginBottom: '4px', textShadow: '0 1px 6px rgba(4,3,2,0.7)' }}>
-                      {t.label}
+            <div className="hero-times-row">
+              <div className="hero-times-blocks">
+                {([
+                  { label: 'Golden Hour', time: selectedFc.goldenHourStart },
+                  { label: 'Sunset',      time: selectedFc.sunsetTime      },
+                  { label: 'Blue Hour',   time: selectedFc.blueHourEnd     },
+                ] as { label: string; time: string | null }[])
+                  .filter(t => t.time)
+                  .map((t, i, arr) => (
+                    <div key={t.label} style={{
+                      paddingRight: i < arr.length - 1 ? '22px' : 0,
+                      marginRight:  i < arr.length - 1 ? '22px' : 0,
+                      borderRight:  i < arr.length - 1 ? '1px solid rgba(200,140,60,0.14)' : 'none',
+                    }}>
+                      <div style={{ fontSize: '0.56rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(237,224,192,0.48)', marginBottom: '4px', textShadow: '0 1px 6px rgba(4,3,2,0.7)' }}>
+                        {t.label}
+                      </div>
+                      <div style={{ fontSize: 'clamp(0.88rem, 1.2vw, 1.02rem)', fontWeight: 600, color: '#EDE0C0', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em', textShadow: '0 1px 10px rgba(4,3,2,0.9)' }}>
+                        {formatTime(t.time!, tz)}
+                      </div>
                     </div>
-                    <div style={{ fontSize: 'clamp(0.88rem, 1.2vw, 1.02rem)', fontWeight: 600, color: '#EDE0C0', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em', textShadow: '0 1px 10px rgba(4,3,2,0.9)' }}>
-                      {formatTime(t.time!, tz)}
-                    </div>
-                  </div>
-                ))
-              }
+                  ))
+                }
+              </div>
 
               {/* Full Forecast — bold pill */}
               {selectedLoc && (
-                <div style={{ marginLeft: 'auto', paddingBottom: '2px', pointerEvents: 'auto' }}>
+                <div className="hero-forecast-link">
                   <Link
                     href={`/sunset/${selectedLoc.slug}`}
                     style={{
@@ -539,6 +558,20 @@ export function HeroSection({ locations, forecastRecord, weekForecastsRecord, to
               )}
             </div>
           )}
+
+          {/* Mobile locations trigger — hidden on desktop via CSS */}
+          <button
+            type="button"
+            className="mobile-locations-btn"
+            onClick={() => setMobileSheetOpen(true)}
+            aria-label="Browse all UK locations"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/>
+              <line x1="16.5" y1="16.5" x2="22" y2="22" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+            All locations
+          </button>
 
           {!selectedFc && (
             <p style={{ fontSize: '0.9rem', color: '#5A4030', fontStyle: 'italic', fontFamily: 'var(--font-display)' }}>
@@ -628,6 +661,77 @@ export function HeroSection({ locations, forecastRecord, weekForecastsRecord, to
       >
         <WeekScoreChart forecasts={weekFc} />
       </div>
+
+      {/* Mobile location sheet */}
+      {mobileSheetOpen && (
+        <>
+          <div
+            className="mobile-sheet-backdrop"
+            onClick={() => setMobileSheetOpen(false)}
+            aria-hidden="true"
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Select a location"
+            className="mobile-sheet"
+          >
+            {/* Handle bar */}
+            <div aria-hidden="true" style={{ width: '36px', height: '4px', background: 'rgba(200,140,60,0.25)', borderRadius: '2px', margin: '12px auto 0', flexShrink: 0 }} />
+
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 10px', flexShrink: 0 }}>
+              <span style={{ fontFamily: 'var(--font-display, Georgia, serif)', fontStyle: 'italic', fontWeight: 700, fontSize: '1.20rem', color: '#EDE0C0', letterSpacing: '-0.02em' }}>
+                Locations
+              </span>
+              <button
+                type="button"
+                onClick={() => setMobileSheetOpen(false)}
+                aria-label="Close"
+                style={{ background: 'none', border: 'none', color: 'rgba(200,140,60,0.40)', fontSize: '1.5rem', cursor: 'pointer', padding: '4px 8px', lineHeight: 1 }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Search */}
+            <div style={{ padding: '0 16px 12px', flexShrink: 0 }}>
+              <LocationSearch locations={locations} placeholder="Search location…" />
+            </div>
+
+            <div aria-hidden="true" style={{ height: '1px', background: 'rgba(200,140,60,0.08)', flexShrink: 0 }} />
+
+            {/* Scrollable location list */}
+            <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none' as const, padding: '4px 8px' }}>
+              {favLocations.length > 0 && (
+                <>
+                  <div style={{ padding: '10px 10px 4px' }}>
+                    <span style={{ fontSize: '0.58rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#F0B830', opacity: 0.7 }}>
+                      ★ Favourites
+                    </span>
+                  </div>
+                  {favLocations.map(loc => (
+                    <SidebarRow key={loc.id} loc={loc} onSelect={() => setMobileSheetOpen(false)} />
+                  ))}
+                  <div aria-hidden="true" style={{ height: '1px', background: 'rgba(200,140,60,0.08)', margin: '6px 0' }} />
+                </>
+              )}
+
+              <div style={{ padding: '10px 10px 4px' }}>
+                <span style={{ fontSize: '0.58rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#5A4030' }}>
+                  Tonight across the UK
+                </span>
+              </div>
+              {scored.map(loc => (
+                <SidebarRow key={loc.id} loc={loc} onSelect={() => setMobileSheetOpen(false)} />
+              ))}
+            </div>
+
+            {/* Safe area for home indicator */}
+            <div aria-hidden="true" style={{ height: 'max(env(safe-area-inset-bottom), 16px)', flexShrink: 0 }} />
+          </div>
+        </>
+      )}
     </section>
   )
 }
