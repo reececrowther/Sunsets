@@ -7,7 +7,7 @@ import { getForecastsForLocation } from '@/lib/database/forecasts'
 import { ForecastStrip } from '@/components/forecast/ForecastStrip'
 import { ConditionsPanel } from '@/components/forecast/ConditionsPanel'
 import { ViewingWindow } from '@/components/forecast/ViewingWindow'
-import { BreakdownPanel } from '@/components/forecast/BreakdownPanel'
+import { BreakdownPanelGated } from '@/components/forecast/BreakdownPanelGated'
 import { Nav } from '@/components/layout/Nav'
 import { SunCompass } from '@/components/forecast/SunCompass'
 import { WeekScoreChart } from '@/components/hero/WeekScoreChart'
@@ -387,7 +387,7 @@ export default async function LocationPage({ params }: Props) {
             {/* Score breakdown */}
             {today.scoreBreakdown && (
               <Panel label="Score breakdown" style={{ marginBottom: '12px' }}>
-                <BreakdownPanel breakdown={today.scoreBreakdown} isPro={false} />
+                <BreakdownPanelGated breakdown={today.scoreBreakdown} />
               </Panel>
             )}
 

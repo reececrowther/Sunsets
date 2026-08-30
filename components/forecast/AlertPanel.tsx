@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { createBrowserClient } from '@/lib/database/client'
+import { isAdminEmail } from '@/lib/utils/admin'
 
 const THRESHOLDS = [50, 60, 65, 70, 75, 80, 85, 90]
 
@@ -32,14 +33,17 @@ export function AlertPanel({ locationId, locationName }: Props) {
 
     setUserId(user.id)
 
-    // Check subscription tier from public.users
-    const { data: profile } = await supabase
-      .from('users')
-      .select('subscription_tier')
-      .eq('id', user.id)
-      .single()
+    // Admin emails bypass the subscription check
+    const isPro = isAdminEmail(user.email ?? '') || await (async () => {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('subscription_tier')
+        .eq('id', user.id)
+        .single()
+      return profile?.subscription_tier === 'pro'
+    })()
 
-    if (!profile || profile.subscription_tier !== 'pro') {
+    if (!isPro) {
       setPanelState('free')
       return
     }
