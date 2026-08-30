@@ -110,6 +110,15 @@ export interface AlertPreference {
   updatedAt: string
 }
 
+export interface SunsetRating {
+  id: string
+  locationId: string
+  forecastDate: string
+  rating: number        // 1–5
+  notes: string | null
+  submittedAt: string
+}
+
 export interface EmailSubscriber {
   id: string
   email: string

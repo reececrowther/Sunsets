@@ -13,6 +13,7 @@ import { SunCompass } from '@/components/forecast/SunCompass'
 import { WeekScoreChart } from '@/components/hero/WeekScoreChart'
 import { APP_NAME } from '@/config/brand'
 import { NotifyButton } from '@/components/ui/NotifyButton'
+import { RatingWidget } from '@/components/forecast/RatingWidget'
 import { formatDate, formatTime } from '@/lib/utils/format'
 
 export const revalidate = 7200
@@ -388,6 +389,16 @@ export default async function LocationPage({ params }: Props) {
                 <BreakdownPanel breakdown={today.scoreBreakdown} isPro={false} />
               </Panel>
             )}
+
+            {/* Community rating — only for today and past dates */}
+            {today.forecastDate <= todayDate && (
+              <Panel label="Rate this sunset" style={{ marginBottom: '12px' }}>
+                <RatingWidget
+                  locationId={location.id}
+                  forecastDate={today.forecastDate}
+                />
+              </Panel>
+            )}
           </>
         ) : (
           <div style={{ padding: '40px 0', textAlign: 'center' }}>
@@ -457,7 +468,7 @@ export default async function LocationPage({ params }: Props) {
         flexWrap:      'wrap',
         gap:           '8px',
       }}>
-        <span style={{ fontSize: '0.72rem', color: '#2E1C10' }}>Weather: Open-Meteo · Astronomy: suncalc</span>
+        <span style={{ fontSize: '0.72rem', color: '#2E1C10' }}>Weather: MET Norway · Astronomy: suncalc</span>
         <Link href="/" style={{ fontSize: '0.72rem', color: '#5A4030', textDecoration: 'none' }}>
           ← {APP_NAME}
         </Link>
