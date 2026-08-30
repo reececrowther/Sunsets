@@ -1,13 +1,13 @@
 import type { ScoreBreakdown } from '@/types'
 
 const FACTOR_LABELS: Record<keyof ScoreBreakdown, string> = {
-  highCloud:    'High cloud',
-  midCloud:     'Mid cloud',
-  lowCloud:     'Low cloud',
-  rain:         'Rain',
-  visibility:   'Visibility',
-  atmosphere:   'Atmosphere',
-  forecastConf: 'Forecast confidence',
+  highCloud:  'High cloud',
+  midCloud:   'Mid cloud',
+  lowCloud:   'Low cloud',
+  rain:       'Rain',
+  visibility: 'Visibility',
+  atmosphere: 'Atmosphere',
+  wind:       'Wind',
 }
 
 function barColor(pct: number): string {

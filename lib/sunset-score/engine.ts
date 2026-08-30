@@ -57,20 +57,32 @@ function scoreVisibility(metres: number): number {
   return 0
 }
 
-function scoreAtmosphere(humidity: number, pressure: number): number {
+// Dew point depression (temperature − dew point) is more physically meaningful
+// than raw humidity. A smaller depression = air is closer to saturation = more
+// haze/fog risk. An ideal range (6–14°C) gives good scattering without murk.
+function scoreAtmosphere(dewPointDepression: number, pressure: number): number {
   let score = 0.50
 
-  // Some humidity enhances scattering; too much causes haze
-  if (humidity >= 40 && humidity <= 65) score += 0.25
-  else if (humidity >= 30 && humidity <= 78) score += 0.12
-  else if (humidity > 85) score -= 0.10
+  if (dewPointDepression >= 6 && dewPointDepression <= 14) score += 0.25
+  else if (dewPointDepression >= 3 && dewPointDepression <= 20) score += 0.12
+  else if (dewPointDepression < 1.5) score -= 0.15   // near-saturation: fog/mist risk
 
-  // High pressure = stable, clear; low = unsettled
+  // High pressure = stable anticyclone = good sunset potential
   if (pressure >= 1015 && pressure <= 1030) score += 0.25
   else if (pressure >= 1007 && pressure <= 1038) score += 0.12
   else if (pressure < 1000) score -= 0.15
 
   return clamp(score, 0, 1)
+}
+
+// Light winds (10–25 km/h) keep the air clear; very calm air risks fog/haze;
+// gale-force winds break up high-level cloud formations.
+function scoreWind(kmh: number): number {
+  if (kmh <= 5)  return lerp(0.40, 0.60, kmh / 5)
+  if (kmh <= 20) return lerp(0.60, 1.00, (kmh - 5) / 15)
+  if (kmh <= 40) return lerp(1.00, 0.65, (kmh - 20) / 20)
+  if (kmh <= 60) return lerp(0.65, 0.25, (kmh - 40) / 20)
+  return lerp(0.25, 0.10, Math.min(1, (kmh - 60) / 30))
 }
 
 // ─── Quality label ──────────────────────────────────────────────────────────
@@ -105,19 +117,29 @@ function colourProbability(input: SunsetScoreInput, score: number): number {
 // ─── Main engine ─────────────────────────────────────────────────────────────
 
 export function calculateSunsetScore(input: SunsetScoreInput): SunsetScoreResult {
+  const dewPointDepression = input.temperature - input.dewPoint
+
   const breakdown: ScoreBreakdown = {
-    highCloud:    Math.round(scoreHighCloud(input.cloudHigh) * WEIGHTS.highCloud),
-    midCloud:     Math.round(scoreMidCloud(input.cloudMid) * WEIGHTS.midCloud),
-    lowCloud:     Math.round(scoreLowCloud(input.cloudLow) * WEIGHTS.lowCloud),
-    rain:         Math.round(scoreRain(input.rainProbability) * WEIGHTS.rain),
-    visibility:   Math.round(scoreVisibility(input.visibility) * WEIGHTS.visibility),
-    atmosphere:   Math.round(scoreAtmosphere(input.humidity, input.pressure) * WEIGHTS.atmosphere),
-    forecastConf: Math.round(calculateConfidence(input.forecastDaysAhead).modifier * WEIGHTS.forecastConf),
+    highCloud:  Math.round(scoreHighCloud(input.cloudHigh) * WEIGHTS.highCloud),
+    midCloud:   Math.round(scoreMidCloud(input.cloudMid) * WEIGHTS.midCloud),
+    lowCloud:   Math.round(scoreLowCloud(input.cloudLow) * WEIGHTS.lowCloud),
+    rain:       Math.round(scoreRain(input.rainProbability) * WEIGHTS.rain),
+    visibility: Math.round(scoreVisibility(input.visibility) * WEIGHTS.visibility),
+    atmosphere: Math.round(scoreAtmosphere(dewPointDepression, input.pressure) * WEIGHTS.atmosphere),
+    wind:       Math.round(scoreWind(input.windSpeed) * WEIGHTS.wind),
   }
 
-  const rawScore = Object.values(breakdown).reduce((a, b) => a + b, 0)
-  const score = clamp(rawScore, 0, 100)
-  const quality = qualityFromScore(score)
+  // Post-sum kill-switch multipliers. Dense low cloud blocks the horizon no
+  // matter what is above it; heavy rain makes every other factor irrelevant.
+  // Applied after the additive sum so each breakdown component still reflects
+  // its own signal cleanly.
+  const horizonMultiplier = input.cloudLow > 75 ? 0.35 : input.cloudLow > 55 ? 0.65 : 1.0
+  const rainMultiplier    = input.rainProbability > 60 ? 0.40 : input.rainProbability > 40 ? 0.72 : 1.0
+
+  const rawSum = Object.values(breakdown).reduce((a, b) => a + b, 0)
+  const score  = clamp(Math.round(rawSum * horizonMultiplier * rainMultiplier), 0, 100)
+
+  const quality    = qualityFromScore(score)
   const confidence = calculateConfidence(input.forecastDaysAhead).value
   const { reasons, warnings } = generateExplanations(input, breakdown, input.forecastDaysAhead)
 

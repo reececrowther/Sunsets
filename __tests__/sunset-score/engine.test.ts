@@ -7,8 +7,10 @@ const PERFECT: SunsetScoreInput = {
   cloudLow: 5,
   rainProbability: 2,
   visibility: 25000,
-  humidity: 55,
+  dewPoint: 10,       // temperature=20, dewPoint=10 → depression=10°C (ideal range 6–14)
+  temperature: 20,
   pressure: 1020,
+  windSpeed: 18,      // light breeze — ideal
   forecastDaysAhead: 0,
 }
 
@@ -18,8 +20,10 @@ const TERRIBLE: SunsetScoreInput = {
   cloudLow: 95,
   rainProbability: 85,
   visibility: 800,
-  humidity: 92,
+  dewPoint: 13,       // temperature=14, dewPoint=13 → depression=1°C (near-saturation)
+  temperature: 14,
   pressure: 992,
+  windSpeed: 75,      // gale force
   forecastDaysAhead: 0,
 }
 
@@ -53,9 +57,7 @@ describe('calculateSunsetScore', () => {
 
   describe('terrible conditions', () => {
     it('scores well below a good sunset (≤30) for terrible conditions', () => {
-      // TERRIBLE has clear skies (cloudHigh=0 gives 8 pts "clear bonus") + today's
-      // confidence (7 pts) — so the floor isn't 0. Rain, low cloud, and poor visibility
-      // combine to a realistic "fair" or worse rating.
+      // Dense low cloud (0.35×) and heavy rain (0.40×) multipliers collapse the score
       const result = calculateSunsetScore(TERRIBLE)
       expect(result.score).toBeLessThanOrEqual(30)
     })
@@ -84,7 +86,8 @@ describe('calculateSunsetScore', () => {
       }
     })
 
-    it('breakdown sum approximately equals score', () => {
+    it('breakdown sum approximately equals score for conditions without multiplier penalties', () => {
+      // PERFECT has cloudLow=5 and rain=2, so both multipliers are 1.0 — sum ≈ score
       const result = calculateSunsetScore(PERFECT)
       const sum = Object.values(result.breakdown).reduce((a, b) => a + b, 0)
       expect(Math.abs(sum - result.score)).toBeLessThanOrEqual(2)  // rounding tolerance
@@ -93,10 +96,8 @@ describe('calculateSunsetScore', () => {
 
   describe('low cloud penalty', () => {
     it('reduces score significantly when low cloud is 100%', () => {
-      // With PERFECT conditions but 100% low cloud, the high/mid clouds above still score
-      // well, but the lowCloud breakdown component should be wiped out (0 pts from 20).
       const highLowCloud: SunsetScoreInput = { ...PERFECT, cloudLow: 100 }
-      const clear = calculateSunsetScore(PERFECT)
+      const clear   = calculateSunsetScore(PERFECT)
       const blocked = calculateSunsetScore(highLowCloud)
       expect(blocked.score).toBeLessThan(clear.score)
       expect(blocked.breakdown.lowCloud).toBe(0)
@@ -107,6 +108,13 @@ describe('calculateSunsetScore', () => {
       const result = calculateSunsetScore(clearHorizon)
       expect(result.breakdown.lowCloud).toBe(20)
     })
+
+    it('applies horizon kill-switch multiplier when low cloud exceeds 75%', () => {
+      const blocked = calculateSunsetScore({ ...PERFECT, cloudLow: 80 })
+      const clear   = calculateSunsetScore(PERFECT)
+      // Horizon multiplier (0.35×) should pull the score down significantly
+      expect(blocked.score).toBeLessThan(clear.score * 0.50)
+    })
   })
 
   describe('rain penalty', () => {
@@ -115,22 +123,28 @@ describe('calculateSunsetScore', () => {
       const result = calculateSunsetScore(rainy)
       expect(result.breakdown.rain).toBeLessThanOrEqual(1)
     })
+
+    it('applies rain kill-switch multiplier when rain exceeds 60%', () => {
+      const rainy = calculateSunsetScore({ ...PERFECT, rainProbability: 75 })
+      const dry   = calculateSunsetScore(PERFECT)
+      expect(rainy.score).toBeLessThan(dry.score * 0.55)
+    })
   })
 
   describe('forecast confidence', () => {
-    it('awards full confidence points for same-day forecast', () => {
+    it('returns high confidence for same-day forecast', () => {
       const result = calculateSunsetScore({ ...PERFECT, forecastDaysAhead: 0 })
-      expect(result.breakdown.forecastConf).toBe(7)
+      expect(result.confidence).toBeGreaterThan(0.88)
     })
 
-    it('awards fewer confidence points for a 5-day forecast', () => {
+    it('returns lower confidence for a 5-day forecast', () => {
       const result = calculateSunsetScore({ ...PERFECT, forecastDaysAhead: 5 })
-      expect(result.breakdown.forecastConf).toBeLessThan(3)
+      expect(result.confidence).toBeLessThan(0.40)
     })
 
-    it('shows lower confidence value for long-range forecasts', () => {
+    it('confidence decreases for longer-range forecasts', () => {
       const near = calculateSunsetScore({ ...PERFECT, forecastDaysAhead: 0 })
-      const far = calculateSunsetScore({ ...PERFECT, forecastDaysAhead: 6 })
+      const far  = calculateSunsetScore({ ...PERFECT, forecastDaysAhead: 6 })
       expect(near.confidence).toBeGreaterThan(far.confidence)
     })
   })
@@ -219,16 +233,39 @@ describe('calculateSunsetScore', () => {
   })
 
   describe('atmosphere scoring', () => {
-    // scoreAtmosphere: ideal humidity (40–65) + ideal pressure (1015–1030) = 1.00
-    it('awards maximum 10 points for ideal humidity and pressure', () => {
-      const result = calculateSunsetScore({ ...PERFECT, humidity: 55, pressure: 1020 })
+    // scoreAtmosphere uses dew point depression (temp − dew point) + pressure
+    // Ideal depression (6–14°C) + ideal pressure (1015–1030) = 1.00
+    it('awards maximum 10 points for ideal dew point depression and pressure', () => {
+      // PERFECT: temperature=20, dewPoint=10 → depression=10°C (ideal); pressure=1020 (ideal)
+      const result = calculateSunsetScore(PERFECT)
       expect(result.breakdown.atmosphere).toBe(10)  // Math.round(1.00 * 10)
     })
 
-    it('awards reduced points when humidity is too high and pressure too low', () => {
-      const ideal = calculateSunsetScore({ ...PERFECT, humidity: 55, pressure: 1020 })
-      const poor  = calculateSunsetScore({ ...PERFECT, humidity: 92, pressure: 992 })
+    it('awards reduced points when air is near-saturated and pressure is low', () => {
+      const ideal = calculateSunsetScore(PERFECT)
+      // TERRIBLE: temperature=14, dewPoint=13 → depression=1°C (near-saturation); pressure=992
+      const poor  = calculateSunsetScore(TERRIBLE)
       expect(poor.breakdown.atmosphere).toBeLessThan(ideal.breakdown.atmosphere)
+    })
+  })
+
+  describe('wind scoring', () => {
+    // scoreWind: 0–5 km/h → 0.40–0.60 (stagnant); 10–20 → peak ≈ 1.00; >60 → 0.25–0.10
+    it('awards maximum 7 points for an ideal light breeze (20 km/h)', () => {
+      const result = calculateSunsetScore({ ...PERFECT, windSpeed: 20 })
+      expect(result.breakdown.wind).toBe(7)  // Math.round(1.00 * 7)
+    })
+
+    it('awards fewer points for very calm conditions (0 km/h)', () => {
+      const calm  = calculateSunsetScore({ ...PERFECT, windSpeed: 0 })
+      const ideal = calculateSunsetScore({ ...PERFECT, windSpeed: 20 })
+      expect(calm.breakdown.wind).toBeLessThan(ideal.breakdown.wind)
+    })
+
+    it('awards fewer points for gale-force winds (70 km/h)', () => {
+      const gale  = calculateSunsetScore({ ...PERFECT, windSpeed: 70 })
+      const ideal = calculateSunsetScore({ ...PERFECT, windSpeed: 20 })
+      expect(gale.breakdown.wind).toBeLessThan(ideal.breakdown.wind)
     })
   })
 
@@ -249,7 +286,7 @@ describe('calculateSunsetScore', () => {
     it('is severely reduced by high rain probability (> 50%)', () => {
       const dry   = calculateSunsetScore({ ...PERFECT, rainProbability: 5 })
       const rainy = calculateSunsetScore({ ...PERFECT, rainProbability: 75 })
-      // ×0.40 penalty means rainy should be less than half of dry
+      // ×0.40 rain penalty means rainy should be less than half of dry
       expect(rainy.colourProbability).toBeLessThan(dry.colourProbability * 0.55)
     })
   })
@@ -261,8 +298,10 @@ describe('calculateSunsetScore', () => {
       cloudLow: 0,
       rainProbability: 0,
       visibility: 30000,
-      humidity: 50,
+      dewPoint: 10,
+      temperature: 20,
       pressure: 1025,
+      windSpeed: 15,
       forecastDaysAhead: 0,
     }
 

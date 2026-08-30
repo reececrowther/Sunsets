@@ -45,6 +45,10 @@ export function generateExplanations(
     reasons.push('Favourable atmospheric conditions')
   }
 
+  if (input.windSpeed >= 10 && input.windSpeed <= 30) {
+    reasons.push('Light breeze will keep the air clear')
+  }
+
   // Negative factors
   if (input.cloudLow > 65) {
     warnings.push('Low cloud is likely to obstruct the horizon')
@@ -66,6 +70,10 @@ export function generateExplanations(
 
   if (input.cloudHigh < 8 && input.cloudMid < 10) {
     warnings.push('Very little cloud to catch the light — colours may be muted')
+  }
+
+  if (input.windSpeed > 50) {
+    warnings.push('Strong winds may disrupt cloud formations')
   }
 
   if (daysAhead >= 4) {

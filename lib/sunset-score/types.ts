@@ -5,9 +5,11 @@ export interface SunsetScoreInput {
   cloudMid: number           // 0–100 percent
   cloudLow: number           // 0–100 percent
   rainProbability: number    // 0–100 percent
-  visibility: number         // metres
-  humidity: number           // 0–100 percent
+  visibility: number         // metres (estimated or measured)
+  dewPoint: number           // °C — used with temperature to compute dew point depression
+  temperature: number        // °C
   pressure: number           // hPa
+  windSpeed: number          // km/h
   forecastDaysAhead: number  // 0 = today, 1 = tomorrow, etc.
 }
 

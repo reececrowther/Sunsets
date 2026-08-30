@@ -70,7 +70,7 @@ export interface ScoreBreakdown {
   rain: number
   visibility: number
   atmosphere: number
-  forecastConf: number
+  wind: number
 }
 
 export interface LocationWithForecast extends Location {

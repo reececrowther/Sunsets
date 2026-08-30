@@ -1,11 +1,11 @@
 // Batch forecast refresh — called by the Vercel Cron job every 2 hours.
 // Fetches weather for all locations, runs the scoring engine, and upserts
-// results to the database. One Open-Meteo request covers 8 days of hourly
-// data, so each location costs exactly one API call.
+// results to the database. One MET Norway request covers 9+ days of data,
+// so each location costs exactly one API call.
 
 import { createAdminClient } from '@/lib/database/client'
 import { upsertForecast, isForecastStale, getForecastsForLocation } from '@/lib/database/forecasts'
-import { fetchWeatherForecast, getWeatherAtTime } from './open-meteo'
+import { fetchWeatherForecast, getWeatherAtTime } from './met-norway'
 import { getAstronomicalData, getViewingWindow } from '@/lib/astronomy/calculations'
 import { calculateSunsetScore } from '@/lib/sunset-score/engine'
 import type { SunsetScoreInput } from '@/lib/sunset-score/types'
@@ -49,8 +49,10 @@ export async function refreshLocation(
         cloudLow: atSunset.cloudLow,
         rainProbability: atSunset.precipitationProb,
         visibility: atSunset.visibility,
-        humidity: atSunset.humidity,
+        dewPoint: atSunset.dewPoint,
+        temperature: atSunset.temperature,
         pressure: atSunset.pressure,
+        windSpeed: atSunset.windSpeed,
         forecastDaysAhead: daysAhead,
       }
 
@@ -85,7 +87,7 @@ export async function refreshLocation(
         scoreBreakdown: scoreResult.breakdown,
         reasons: scoreResult.reasons,
         warnings: scoreResult.warnings,
-        weatherSource: 'open-meteo',
+        weatherSource: 'met-norway',
         fetchedAt: weather.fetchedAt.toISOString(),
         expiresAt: null,  // set by upsertForecast
       })
@@ -123,7 +125,7 @@ export async function refreshAllLocations(): Promise<RefreshResult[]> {
       location.timezone,
     )
     results.push(result)
-    // Respectful rate limiting — 200ms between requests
+    // Respectful rate limiting — MET Norway asks for polite usage
     await new Promise(resolve => setTimeout(resolve, 200))
   }
 

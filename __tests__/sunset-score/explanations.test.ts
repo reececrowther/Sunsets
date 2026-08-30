@@ -8,24 +8,26 @@ const GOOD_INPUT: SunsetScoreInput = {
   cloudLow: 5,
   rainProbability: 2,
   visibility: 25000,
-  humidity: 55,
+  dewPoint: 10,
+  temperature: 20,
   pressure: 1020,
+  windSpeed: 18,
   forecastDaysAhead: 0,
 }
 
 // Breakdown values that fire all positive reasons
 const GOOD_BREAKDOWN: ScoreBreakdown = {
-  highCloud:    16,  // >= Math.round(0.80 * 20) = 16
-  midCloud:     10,  // >= Math.round(0.75 * 13) = 10
-  lowCloud:     17,  // >= Math.round(0.85 * 20) = 17
-  rain:         13,  // >= Math.round(0.85 * 15) = 13
-  visibility:   13,  // >= Math.round(0.85 * 15) = 13
-  atmosphere:    8,  // >= Math.round(0.80 * 10) = 8
-  forecastConf:  7,
+  highCloud:   16,  // >= Math.round(0.80 * 20) = 16
+  midCloud:    10,  // >= Math.round(0.75 * 13) = 10
+  lowCloud:    17,  // >= Math.round(0.85 * 20) = 17
+  rain:        13,  // >= Math.round(0.85 * 15) = 13
+  visibility:  13,  // >= Math.round(0.85 * 15) = 13
+  atmosphere:   8,  // >= Math.round(0.80 * 10) = 8
+  wind:         7,
 }
 
 const ZERO_BREAKDOWN: ScoreBreakdown = {
-  highCloud: 0, midCloud: 0, lowCloud: 0, rain: 0, visibility: 0, atmosphere: 0, forecastConf: 0,
+  highCloud: 0, midCloud: 0, lowCloud: 0, rain: 0, visibility: 0, atmosphere: 0, wind: 0,
 }
 
 describe('generateExplanations — reasons', () => {
@@ -50,9 +52,10 @@ describe('generateExplanations — reasons', () => {
   })
 
   it('falls back to a negative reason when no positive factors fire', () => {
-    const flatInput: SunsetScoreInput = { ...GOOD_INPUT, cloudHigh: 0, cloudMid: 0 }
+    // windSpeed=5 is below the light-breeze bonus range (10–30) so no wind reason fires
+    const flatInput: SunsetScoreInput = { ...GOOD_INPUT, cloudHigh: 0, cloudMid: 0, windSpeed: 5 }
     const { reasons } = generateExplanations(flatInput, ZERO_BREAKDOWN, 0)
-    expect(reasons[0]).toBe('Conditions are unlikely to produce a colourful sunset')
+    expect(reasons.some(r => r.includes('unlikely to produce'))).toBe(true)
   })
 })
 

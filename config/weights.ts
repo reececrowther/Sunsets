@@ -2,13 +2,13 @@
 // Adjust these values to tune the algorithm without touching engine logic.
 
 export const WEIGHTS = {
-  highCloud: 20,
-  midCloud: 13,
-  lowCloud: 20,
-  rain: 15,
-  visibility: 15,
-  atmosphere: 10,
-  forecastConf: 7,
+  highCloud:   20,
+  midCloud:    13,
+  lowCloud:    20,
+  rain:        15,
+  visibility:  15,
+  atmosphere:  10,
+  wind:         7,  // replaces forecastConf — confidence is display-only metadata
 } as const
 
 // Sanity check (evaluated at module load, not runtime)

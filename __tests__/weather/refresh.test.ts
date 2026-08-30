@@ -1,12 +1,12 @@
-jest.mock('@/lib/weather/open-meteo')
+jest.mock('@/lib/weather/met-norway')
 jest.mock('@/lib/database/forecasts')
 jest.mock('@/lib/astronomy/calculations')
 
 import { refreshLocation } from '@/lib/weather/refresh'
-import { fetchWeatherForecast, getWeatherAtTime } from '@/lib/weather/open-meteo'
+import { fetchWeatherForecast, getWeatherAtTime } from '@/lib/weather/met-norway'
 import { upsertForecast } from '@/lib/database/forecasts'
 import { getAstronomicalData, getViewingWindow } from '@/lib/astronomy/calculations'
-import type { HourlyWeatherPoint } from '@/lib/weather/open-meteo'
+import type { HourlyWeatherPoint } from '@/lib/weather/met-norway'
 
 const mockFetchWeather     = jest.mocked(fetchWeatherForecast)
 const mockGetWeatherAtTime = jest.mocked(getWeatherAtTime)
@@ -29,7 +29,7 @@ const MOCK_ASTRONOMICAL = {
 }
 
 const MOCK_WEATHER_POINT: HourlyWeatherPoint = {
-  time:              '2026-08-18T19:00',
+  time:              '2026-08-18T19:00:00Z',
   cloudCover:        40,
   cloudLow:          5,
   cloudMid:          30,
@@ -38,19 +38,19 @@ const MOCK_WEATHER_POINT: HourlyWeatherPoint = {
   visibility:        25000,
   humidity:          55,
   pressure:          1020,
-  windSpeed:         12,
+  windSpeed:         18,
   windDirection:     270,
   temperature:       18,
+  dewPoint:          8,
 }
 
 describe('refreshLocation', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockFetchWeather.mockResolvedValue({
-      latitude: 51.5,
+      latitude:  51.5,
       longitude: -0.1,
-      timezone: 'Europe/London',
-      hourly: [],
+      hourly:    [],
       fetchedAt: new Date(),
     })
     mockGetWeatherAtTime.mockReturnValue(MOCK_WEATHER_POINT)
@@ -104,22 +104,20 @@ describe('refreshLocation', () => {
     expect(upserted.sunsetTime).toBe(SUNSET_TIME.toISOString())
     expect(upserted.cloudHigh).toBe(MOCK_WEATHER_POINT.cloudHigh)
     expect(upserted.sunsetAzimuth).toBe(MOCK_ASTRONOMICAL.sunsetAzimuth)
-    expect(upserted.weatherSource).toBe('open-meteo')
+    expect(upserted.weatherSource).toBe('met-norway')
   })
 
-  it('correctly increments forecastDaysAhead for each day', async () => {
+  it('confidence decreases for forecasts further into the future', async () => {
     await refreshLocation('loc-1', 'London', 51.5, -0.1, 'Europe/London')
-    // Day 0 upsert should have forecastConf corresponding to daysAhead=0 (max confidence)
-    // We can verify this via the score breakdown
     const day0 = mockUpsertForecast.mock.calls[0][0]
     const day6 = mockUpsertForecast.mock.calls[6][0]
-    expect(day0.scoreBreakdown!.forecastConf).toBeGreaterThan(day6.scoreBreakdown!.forecastConf)
+    expect(day0.confidence!).toBeGreaterThan(day6.confidence!)
   })
 
   it('returns an error result when fetchWeatherForecast throws', async () => {
-    mockFetchWeather.mockRejectedValue(new Error('Open-Meteo unavailable'))
+    mockFetchWeather.mockRejectedValue(new Error('MET Norway unavailable'))
     const result = await refreshLocation('loc-1', 'London', 51.5, -0.1, 'Europe/London')
-    expect(result.error).toBe('Open-Meteo unavailable')
+    expect(result.error).toBe('MET Norway unavailable')
     expect(result.daysRefreshed).toBe(0)
     expect(mockUpsertForecast).not.toHaveBeenCalled()
   })
