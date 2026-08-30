@@ -14,6 +14,7 @@ import { WeekScoreChart } from '@/components/hero/WeekScoreChart'
 import { APP_NAME } from '@/config/brand'
 import { NotifyButton } from '@/components/ui/NotifyButton'
 import { RatingWidget } from '@/components/forecast/RatingWidget'
+import { AlertPanel } from '@/components/forecast/AlertPanel'
 import { formatDate, formatTime } from '@/lib/utils/format'
 
 export const revalidate = 7200
@@ -399,6 +400,11 @@ export default async function LocationPage({ params }: Props) {
                 />
               </Panel>
             )}
+
+            {/* Alert panel — client-side auth check */}
+            <Panel label="Sunset alerts" style={{ marginBottom: '12px' }}>
+              <AlertPanel locationId={location.id} locationName={location.name} />
+            </Panel>
           </>
         ) : (
           <div style={{ padding: '40px 0', textAlign: 'center' }}>

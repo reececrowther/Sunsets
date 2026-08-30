@@ -4,6 +4,10 @@ jest.mock('@/lib/weather/refresh', () => ({
   refreshAllLocations: jest.fn(),
 }))
 
+jest.mock('@/lib/alerts/check', () => ({
+  checkAndSendAlerts: jest.fn().mockResolvedValue({ sent: 0, errors: 0 }),
+}))
+
 import { GET } from '@/app/api/cron/refresh-forecasts/route'
 import { refreshAllLocations } from '@/lib/weather/refresh'
 

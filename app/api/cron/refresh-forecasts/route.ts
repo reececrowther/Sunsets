@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { refreshAllLocations } from '@/lib/weather/refresh'
+import { checkAndSendAlerts } from '@/lib/alerts/check'
 
 // Called by Vercel Cron every 2 hours (see vercel.json).
 // Secured with a shared secret to prevent unauthenticated triggers.
@@ -22,6 +23,8 @@ export async function GET(request: NextRequest) {
     const errors = results.filter(r => r.error)
     const succeeded = results.filter(r => !r.error)
 
+    const alertStats = await checkAndSendAlerts()
+
     return NextResponse.json({
       ok: true,
       durationMs: Date.now() - started,
@@ -29,6 +32,7 @@ export async function GET(request: NextRequest) {
       succeeded: succeeded.length,
       errors: errors.length,
       errorDetails: errors.map(e => ({ location: e.locationName, error: e.error })),
+      alerts: alertStats,
     })
   } catch (err) {
     console.error('[cron/refresh-forecasts]', err)

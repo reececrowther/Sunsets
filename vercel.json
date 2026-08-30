@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/refresh-forecasts",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/daily-digest",
+      "schedule": "0 8 * * *"
     }
   ]
 }

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { NotifyModal } from '@/components/ui/NotifyModal'
+import { createBrowserClient } from '@/lib/database/client'
 
 interface Props {
   maxWidth?: string
@@ -11,6 +12,7 @@ interface Props {
 export function Nav({ maxWidth = '1200px' }: Props) {
   const [scrolled,    setScrolled]    = useState(false)
   const [notifyOpen,  setNotifyOpen]  = useState(false)
+  const [userEmail,   setUserEmail]   = useState<string | null>(null)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 48)
@@ -18,6 +20,23 @@ export function Nav({ maxWidth = '1200px' }: Props) {
     onScroll()
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  useEffect(() => {
+    const supabase = createBrowserClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUserEmail(user?.email ?? null)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserEmail(session?.user?.email ?? null)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  async function handleSignOut() {
+    const supabase = createBrowserClient()
+    await supabase.auth.signOut()
+    setUserEmail(null)
+  }
 
   return (
     <header style={{
@@ -98,6 +117,54 @@ export function Nav({ maxWidth = '1200px' }: Props) {
           >
             How it works
           </a>
+
+          {userEmail ? (
+            <>
+              <span style={{
+                fontSize:    '0.76rem',
+                color:       'rgba(237,224,192,0.32)',
+                maxWidth:    '160px',
+                overflow:    'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace:  'nowrap',
+                display:     'inline-block',
+              }}>
+                {userEmail.replace(/@.*/, '')}
+              </span>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                style={{
+                  fontSize:     '0.78rem',
+                  fontWeight:   500,
+                  color:        '#5A4030',
+                  cursor:       'pointer',
+                  padding:      '6px 12px',
+                  border:       '1px solid rgba(90,64,48,0.25)',
+                  borderRadius: '6px',
+                  background:   'transparent',
+                }}
+              >
+                Sign out
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/auth/login"
+              style={{
+                fontSize:     '0.78rem',
+                fontWeight:   500,
+                color:        'rgba(237,224,192,0.50)',
+                textDecoration: 'none',
+                padding:      '6px 12px',
+                border:       '1px solid rgba(200,140,60,0.12)',
+                borderRadius: '6px',
+              }}
+            >
+              Sign in
+            </Link>
+          )}
+
           <button
             type="button"
             onClick={() => setNotifyOpen(true)}
