@@ -2,6 +2,23 @@ export type SubscriptionTier = 'free' | 'pro'
 
 export type SunsetQuality = 'poor' | 'fair' | 'good' | 'great' | 'excellent'
 
+export type AuroraQuality = 'high_activity' | 'moderate' | 'low' | 'marginal' | 'unlikely'
+
+export interface AuroraForecast {
+  id:           string
+  locationId:   string
+  forecastDate: string
+  kpPeak:       number
+  auroraScore:  number
+  quality:      AuroraQuality
+  cloudPenalty: number
+  minKpNeeded:  number
+  darkStart:    string | null
+  darkEnd:      string | null
+  createdAt:    string
+  updatedAt:    string
+}
+
 export type AlertChannel = 'email' | 'push'
 
 export interface Location {

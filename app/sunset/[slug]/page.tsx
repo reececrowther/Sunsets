@@ -15,6 +15,7 @@ import { APP_NAME } from '@/config/brand'
 import { NotifyButton } from '@/components/ui/NotifyButton'
 import { RatingWidget } from '@/components/forecast/RatingWidget'
 import { AlertPanel } from '@/components/forecast/AlertPanel'
+import { AuroraPanel } from '@/components/forecast/AuroraPanel'
 import { formatDate, formatTime } from '@/lib/utils/format'
 
 export const revalidate = 7200
@@ -400,6 +401,15 @@ export default async function LocationPage({ params }: Props) {
                 />
               </Panel>
             )}
+
+            {/* Northern lights forecast */}
+            <Panel label="Northern lights tonight" style={{ marginBottom: '12px' }}>
+              <AuroraPanel
+                locationId={location.id}
+                timezone={location.timezone}
+                latitude={location.latitude}
+              />
+            </Panel>
 
             {/* Alert panel — client-side auth check */}
             <Panel label="Sunset alerts" style={{ marginBottom: '12px' }}>

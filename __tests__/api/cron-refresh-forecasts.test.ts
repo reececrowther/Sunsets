@@ -8,6 +8,10 @@ jest.mock('@/lib/alerts/check', () => ({
   checkAndSendAlerts: jest.fn().mockResolvedValue({ sent: 0, errors: 0 }),
 }))
 
+jest.mock('@/lib/weather/aurora-refresh', () => ({
+  refreshAuroraForecasts: jest.fn().mockResolvedValue([]),
+}))
+
 import { GET } from '@/app/api/cron/refresh-forecasts/route'
 import { refreshAllLocations } from '@/lib/weather/refresh'
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { refreshAllLocations } from '@/lib/weather/refresh'
+import { refreshAuroraForecasts } from '@/lib/weather/aurora-refresh'
 import { checkAndSendAlerts } from '@/lib/alerts/check'
 
 // Called by Vercel Cron every 2 hours (see vercel.json).
@@ -23,16 +24,23 @@ export async function GET(request: NextRequest) {
     const errors = results.filter(r => r.error)
     const succeeded = results.filter(r => !r.error)
 
-    const alertStats = await checkAndSendAlerts()
+    const [alertStats, auroraResults] = await Promise.all([
+      checkAndSendAlerts(),
+      refreshAuroraForecasts(),
+    ])
 
     return NextResponse.json({
       ok: true,
-      durationMs: Date.now() - started,
-      locations: results.length,
-      succeeded: succeeded.length,
-      errors: errors.length,
+      durationMs:   Date.now() - started,
+      locations:    results.length,
+      succeeded:    succeeded.length,
+      errors:       errors.length,
       errorDetails: errors.map(e => ({ location: e.locationName, error: e.error })),
-      alerts: alertStats,
+      alerts:       alertStats,
+      aurora: {
+        refreshed: auroraResults.filter(r => !r.error).length,
+        errors:    auroraResults.filter(r => r.error).length,
+      },
     })
   } catch (err) {
     console.error('[cron/refresh-forecasts]', err)
