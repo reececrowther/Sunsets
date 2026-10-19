@@ -12,6 +12,10 @@ jest.mock('@/lib/weather/aurora-refresh', () => ({
   refreshAuroraForecasts: jest.fn().mockResolvedValue([]),
 }))
 
+jest.mock('@/lib/weather/tides-refresh', () => ({
+  refreshTideForecasts: jest.fn().mockResolvedValue([]),
+}))
+
 import { GET } from '@/app/api/cron/refresh-forecasts/route'
 import { refreshAllLocations } from '@/lib/weather/refresh'
 

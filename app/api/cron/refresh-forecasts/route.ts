@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { refreshAllLocations } from '@/lib/weather/refresh'
 import { refreshAuroraForecasts } from '@/lib/weather/aurora-refresh'
+import { refreshTideForecasts } from '@/lib/weather/tides-refresh'
 import { checkAndSendAlerts } from '@/lib/alerts/check'
 
 // Called by Vercel Cron every 2 hours (see vercel.json).
@@ -24,9 +25,10 @@ export async function GET(request: NextRequest) {
     const errors = results.filter(r => r.error)
     const succeeded = results.filter(r => !r.error)
 
-    const [alertStats, auroraResults] = await Promise.all([
+    const [alertStats, auroraResults, tideResults] = await Promise.all([
       checkAndSendAlerts(),
       refreshAuroraForecasts(),
+      refreshTideForecasts(),
     ])
 
     return NextResponse.json({
@@ -40,6 +42,11 @@ export async function GET(request: NextRequest) {
       aurora: {
         refreshed: auroraResults.filter(r => !r.error).length,
         errors:    auroraResults.filter(r => r.error).length,
+      },
+      tides: {
+        refreshed: tideResults.filter(r => !r.error).length,
+        skipped:   tideResults.length === 0 ? 'no WORLDTIDES_API_KEY' : undefined,
+        errors:    tideResults.filter(r => r.error).length,
       },
     })
   } catch (err) {

@@ -16,7 +16,10 @@ import { NotifyButton } from '@/components/ui/NotifyButton'
 import { RatingWidget } from '@/components/forecast/RatingWidget'
 import { AlertPanel } from '@/components/forecast/AlertPanel'
 import { AuroraPanel } from '@/components/forecast/AuroraPanel'
+import { NightConditions } from '@/components/forecast/NightConditions'
 import { formatDate, formatTime } from '@/lib/utils/format'
+import { getMoonData } from '@/lib/astronomy/moon'
+import { getTideExtremes } from '@/lib/database/tides'
 
 export const revalidate = 7200
 
@@ -78,6 +81,9 @@ export default async function LocationPage({ params }: Props) {
   const forecasts  = await getForecastsForLocation(location.id, 7)
   const today      = forecasts[0] ?? null
   const todayDate  = new Date().toISOString().slice(0, 10)
+
+  const moon  = getMoonData(new Date(), location.latitude, location.longitude)
+  const tides = await getTideExtremes(location.id, todayDate)
 
   const hasForecast   = today !== null && today.score !== null
   const quality       = today?.quality ?? 'default'
@@ -385,6 +391,17 @@ export default async function LocationPage({ params }: Props) {
               <ConditionsPanel forecast={today} />
             </Panel>
 
+            {/* Sky tonight — moon, atmosphere, tides */}
+            <Panel label="Sky tonight" style={{ marginBottom: '12px' }}>
+              <NightConditions
+                moon={moon}
+                forecast={today}
+                tides={tides}
+                timezone={location.timezone}
+                date={todayDate}
+              />
+            </Panel>
+
             {/* Score breakdown */}
             {today.scoreBreakdown && (
               <Panel label="Score breakdown" style={{ marginBottom: '12px' }}>
@@ -484,7 +501,9 @@ export default async function LocationPage({ params }: Props) {
         flexWrap:      'wrap',
         gap:           '8px',
       }}>
-        <span style={{ fontSize: '0.72rem', color: '#2E1C10' }}>Weather: MET Norway · Astronomy: suncalc</span>
+        <span style={{ fontSize: '0.72rem', color: '#2E1C10' }}>
+          Weather: MET Norway · Astronomy: suncalc{tides ? ' · Tides: WorldTides' : ''}
+        </span>
         <Link href="/" style={{ fontSize: '0.72rem', color: '#5A4030', textDecoration: 'none' }}>
           ← {APP_NAME}
         </Link>
