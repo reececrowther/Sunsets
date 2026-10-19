@@ -3,7 +3,7 @@ import { formatTime } from '@/lib/utils/format'
 import { moonLitPath } from '@/lib/astronomy/moon'
 import type { MoonData } from '@/lib/astronomy/moon'
 import type { SunsetForecast } from '@/types'
-import type { TideExtreme } from '@/lib/weather/worldtides'
+import type { TideExtreme } from '@/lib/weather/slackwater'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

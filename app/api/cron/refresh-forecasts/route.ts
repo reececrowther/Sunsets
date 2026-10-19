@@ -45,7 +45,6 @@ export async function GET(request: NextRequest) {
       },
       tides: {
         refreshed: tideResults.filter(r => !r.error).length,
-        skipped:   tideResults.length === 0 ? 'no WORLDTIDES_API_KEY' : undefined,
         errors:    tideResults.filter(r => r.error).length,
       },
     })

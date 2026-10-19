@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { formatTime } from '@/lib/utils/format'
-import type { TideExtreme } from '@/lib/weather/worldtides'
+import type { TideExtreme } from '@/lib/weather/slackwater'
 
 interface Props {
   tides:    TideExtreme[]

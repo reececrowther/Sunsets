@@ -1,20 +1,20 @@
-// Refresh tidal extremes for all locations via WorldTides API.
-// Silently skips if WORLDTIDES_API_KEY is not configured.
+// Refresh tidal extremes for all locations using offline harmonic prediction.
+// No API key required — uses the Slackwater engine + TICON-4 station database.
 
 import { createAdminClient } from '@/lib/database/client'
-import { fetchTideExtremes } from './worldtides'
+import { fetchTideExtremes } from './slackwater'
 import { upsertTideExtremes } from '@/lib/database/tides'
 
 export interface TideRefreshResult {
   locationId:   string
   locationName: string
+  stationName:  string
+  distanceKm:   number
   extremes:     number
   error?:       string
 }
 
 export async function refreshTideForecasts(): Promise<TideRefreshResult[]> {
-  if (!process.env.WORLDTIDES_API_KEY) return []
-
   const supabase = createAdminClient()
   const { data: locations } = await supabase
     .from('locations')
@@ -27,13 +27,22 @@ export async function refreshTideForecasts(): Promise<TideRefreshResult[]> {
 
   for (const loc of locations) {
     try {
-      const extremes = await fetchTideExtremes(loc.latitude, loc.longitude, today)
+      const result = await fetchTideExtremes(loc.latitude, loc.longitude, today)
+      const extremes = result?.extremes ?? []
       await upsertTideExtremes(loc.id, today, extremes)
-      results.push({ locationId: loc.id, locationName: loc.name, extremes: extremes.length })
+      results.push({
+        locationId:   loc.id,
+        locationName: loc.name,
+        stationName:  result?.stationName ?? 'unknown',
+        distanceKm:   result?.distanceKm  ?? 0,
+        extremes:     extremes.length,
+      })
     } catch (err) {
       results.push({
         locationId:   loc.id,
         locationName: loc.name,
+        stationName:  'error',
+        distanceKm:   0,
         extremes:     0,
         error:        err instanceof Error ? err.message : 'Unknown error',
       })

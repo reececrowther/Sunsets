@@ -1,5 +1,5 @@
 import { createAdminClient } from './client'
-import type { TideExtreme } from '@/lib/weather/worldtides'
+import type { TideExtreme } from '@/lib/weather/slackwater'
 
 export async function getTideExtremes(
   locationId: string,
